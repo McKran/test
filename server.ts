@@ -3,10 +3,7 @@ import path from "path";
 import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import axios from "axios";
-import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
-
-dotenv.config();
 
 // ================================================================
 // COMPREHENSIVE INTERNATIONAL CROP DATABASE (65+ crops)
@@ -377,7 +374,13 @@ function getMockWeather(location: string) {
 // ================================================================
 // AI — GEMINI WITH MODEL ROUTING
 // ================================================================
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({
+  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
+  httpOptions: {
+    apiVersion: "",
+    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+  },
+});
 
 type ModelPersona = "DeepSeek-R1" | "Qwen-2.5" | "LLaMA-3";
 
@@ -622,19 +625,12 @@ async function startServer() {
     const { message, history = [], userPrefs = {} } = req.body;
     if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.json({
-        content: `[AI Offline — No API key configured] Based on your query about "${message}", I recommend consulting local agricultural extension services for ${userPrefs.crop || "your crops"} in ${userPrefs.location || "your region"}.`,
-        model: "LLaMA-3",
-      });
-    }
-
     try {
       const persona = routeModel(message);
       const systemInstruction = getSystemPrompt(persona, userPrefs);
 
       const chat = ai.chats.create({
-        model: "gemini-2.0-flash",
+        model: "gemini-2.5-flash",
         config: { systemInstruction },
         history: history.map((m: any) => ({
           role: m.role === "ai" ? "model" : "user",
