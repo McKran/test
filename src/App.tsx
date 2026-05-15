@@ -1,22 +1,18 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { LayoutDashboard, 
-  CloudSun, 
-  Sprout, 
-  TrendingUp, 
-  MessageSquare, 
-  Settings, 
-  Menu, 
-  X,
+import {
+  LayoutDashboard,
+  CloudSun,
+  Sprout,
+  TrendingUp,
+  MessageSquare,
+  Settings,
   Leaf,
   Moon,
-  Sun
+  Sun,
+  X,
+  Menu,
 } from "lucide-react";
 
 import Dashboard from "./pages/Dashboard";
@@ -28,32 +24,21 @@ import SettingsPage from "./pages/Settings";
 import Onboarding from "./components/Onboarding";
 import { UserPrefs } from "./types";
 
-const NavItem = ({ to, icon: Icon, children, onClick }: { to: string, icon: any, children?: React.ReactNode, onClick?: () => void }) => (
-  <NavLink 
-    to={to} 
-    onClick={onClick}
-    className={({ isActive }) => `
-      flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300
-      ${isActive 
-        ? "bg-sage-600 text-white shadow-lg shadow-sage-200 dark:shadow-none" 
-        : "text-stone-600 dark:text-stone-400 hover:bg-sage-50 dark:hover:bg-stone-800 hover:text-sage-700"}
-    `}
-  >
-    <Icon size={20} />
-    {children && <span className="font-medium">{children}</span>}
-  </NavLink>
-);
+const navItems = [
+  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/weather", icon: CloudSun, label: "Weather" },
+  { to: "/crops", icon: Sprout, label: "Crop Advisor" },
+  { to: "/market", icon: TrendingUp, label: "Markets" },
+  { to: "/chat", icon: MessageSquare, label: "AI Chat" },
+];
 
 const AppContent = () => {
-  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem("theme") === "dark");
-  const [fontTheme, setFontTheme] = useState(() => localStorage.getItem("font_theme") || "font-inter");
   const [isOnboarded, setIsOnboarded] = useState(() => !!localStorage.getItem("user_prefs"));
   const location = useLocation();
 
-  useEffect(() => {
-    setSidebarOpen(false);
-  }, [location]);
+  useEffect(() => { setMobileMenuOpen(false); }, [location]);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -70,108 +55,177 @@ const AppContent = () => {
     setIsOnboarded(true);
   };
 
-  if (!isOnboarded) {
-    return <Onboarding onComplete={handleOnboardingComplete} />;
-  }
+  if (!isOnboarded) return <Onboarding onComplete={handleOnboardingComplete} />;
 
   return (
-    <div className={`min-h-screen bg-stone-50 dark:bg-[#0f1115] text-stone-900 dark:text-stone-200 ${fontTheme} transition-colors duration-300`}>
-      {/* Mobile Header */}
-      <header className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 sticky top-0 z-50">
-        <div className="flex items-center gap-2 text-sage-700">
-          <Leaf className="fill-sage-600" />
-          <span className="font-bold text-xl tracking-tight">AgriAI</span>
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#0a0a0b] text-stone-900 dark:text-stone-100 transition-colors duration-300">
+
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex flex-col fixed inset-y-0 left-0 w-60 bg-white dark:bg-[#111113] border-r border-stone-200/80 dark:border-stone-800/80 z-40">
+        {/* Logo */}
+        <div className="px-6 py-5 flex items-center gap-2.5 border-b border-stone-100 dark:border-stone-800/60">
+          <div className="w-8 h-8 bg-sage-600 rounded-lg flex items-center justify-center shadow-sm">
+            <Leaf size={16} className="text-white" />
+          </div>
+          <span className="font-bold text-lg tracking-tight text-stone-900 dark:text-white">AgriAI</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
+
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-4 space-y-0.5">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/"}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                  isActive
+                    ? "bg-sage-50 dark:bg-sage-900/20 text-sage-700 dark:text-sage-400"
+                    : "text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-200"
+                }`
+              }
+            >
+              <Icon size={17} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Bottom */}
+        <div className="px-3 py-4 border-t border-stone-100 dark:border-stone-800/60 space-y-0.5">
+          <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-2 text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-200 transition-all"
           >
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            {isDarkMode ? <Sun size={17} /> : <Moon size={17} />}
+            {isDarkMode ? "Light Mode" : "Dark Mode"}
           </button>
-          <button 
-            onClick={() => setSidebarOpen(!isSidebarOpen)}
-            className="p-2 text-stone-600 dark:text-stone-400 active:scale-95 transition-transform"
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? "bg-sage-50 dark:bg-sage-900/20 text-sage-700 dark:text-sage-400"
+                  : "text-stone-500 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800/60 hover:text-stone-900 dark:hover:text-stone-200"
+              }`
+            }
           >
-            {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            <Settings size={17} />
+            Settings
+          </NavLink>
+        </div>
+      </aside>
+
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-50 flex items-center justify-between px-4 h-14 bg-white/90 dark:bg-[#111113]/90 backdrop-blur-xl border-b border-stone-200/80 dark:border-stone-800/80">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-sage-600 rounded-md flex items-center justify-center">
+            <Leaf size={14} className="text-white" />
+          </div>
+          <span className="font-bold text-base tracking-tight">AgriAI</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <button onClick={() => setMobileMenuOpen(!isMobileMenuOpen)} className="p-2 rounded-lg text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
+            {isMobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
       </header>
 
-      <div className="flex h-[calc(100vh-64px)] lg:h-screen overflow-hidden">
-        {/* Sidebar (Desktop) */}
-        <aside className={`
-          fixed lg:relative z-40 w-64 h-full bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 transition-transform duration-300
-          ${isSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-        `}>
-          <div className="p-6 hidden lg:flex items-center justify-between gap-2 text-sage-700 mb-8">
-            <div className="flex items-center gap-2">
-              <Leaf size={32} className="fill-sage-600" />
-              <span className="font-extrabold text-2xl tracking-tighter">AgriAI</span>
-            </div>
-          </div>
-
-          <nav className="px-4 space-y-1">
-            <NavItem to="/" icon={LayoutDashboard}>Dashboard</NavItem>
-            <NavItem to="/weather" icon={CloudSun}>Weather</NavItem>
-            <NavItem to="/crops" icon={Sprout}>Crop Advice</NavItem>
-            <NavItem to="/market" icon={TrendingUp}>Market Trends</NavItem>
-            <NavItem to="/chat" icon={MessageSquare}>AI Assistant</NavItem>
-          </nav>
-
-          <div className="absolute bottom-8 left-0 right-0 px-4 space-y-2">
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="w-full flex items-center gap-3 px-4 py-3 text-stone-600 dark:text-stone-400 hover:bg-sage-50 dark:hover:bg-stone-800 rounded-xl transition-all"
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-              <span className="font-medium">{isDarkMode ? "Light Mode" : "Dark Mode"}</span>
-            </button>
-            <NavItem to="/settings" icon={Settings}>Settings</NavItem>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-stone-50 dark:bg-stone-900 relative pb-20 lg:pb-0">
-          <AnimatePresence mode="wait">
+      {/* Mobile Dropdown Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
             <motion.div
-              key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="lg:hidden fixed inset-0 top-14 bg-black/20 z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className="p-4 lg:p-8 max-w-7xl mx-auto w-full"
+              exit={{ opacity: 0, y: -8 }}
+              className="lg:hidden fixed top-14 left-0 right-0 z-50 bg-white dark:bg-[#111113] border-b border-stone-200 dark:border-stone-800 px-3 py-2 space-y-0.5"
             >
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/weather" element={<Weather />} />
-                <Route path="/crops" element={<Crops />} />
-                <Route path="/market" element={<Market />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="*" element={<Dashboard />} />
-              </Routes>
+              {navItems.map(({ to, icon: Icon, label }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === "/"}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                      isActive
+                        ? "bg-sage-50 dark:bg-sage-900/20 text-sage-700 dark:text-sage-400"
+                        : "text-stone-600 dark:text-stone-400"
+                    }`
+                  }
+                >
+                  <Icon size={17} />
+                  {label}
+                </NavLink>
+              ))}
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${
+                    isActive ? "bg-sage-50 dark:bg-sage-900/20 text-sage-700 dark:text-sage-400" : "text-stone-600 dark:text-stone-400"
+                  }`
+                }
+              >
+                <Settings size={17} />
+                Settings
+              </NavLink>
             </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
 
-      {/* Mobile Bottom Tab Bar */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 px-6 py-3 z-50 flex justify-between items-center">
-        <NavItem to="/" icon={LayoutDashboard} />
-        <NavItem to="/weather" icon={CloudSun} />
-        <NavItem to="/chat" icon={MessageSquare} />
-        <NavItem to="/crops" icon={Sprout} />
-        <NavItem to="/market" icon={TrendingUp} />
+      {/* Main content */}
+      <main className="lg:pl-60 min-h-screen">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="min-h-screen"
+          >
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/weather" element={<Weather />} />
+              <Route path="/crops" element={<Crops />} />
+              <Route path="/market" element={<Market />} />
+              <Route path="/chat" element={<Chat />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="*" element={<Dashboard />} />
+            </Routes>
+          </motion.div>
+        </AnimatePresence>
+      </main>
+
+      {/* Mobile Bottom Bar */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-[#111113]/90 backdrop-blur-xl border-t border-stone-200/80 dark:border-stone-800/80 flex items-center justify-around px-2 h-16">
+        {navItems.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === "/"}
+            className={({ isActive }) =>
+              `flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+                isActive ? "text-sage-600 dark:text-sage-400" : "text-stone-400 dark:text-stone-500"
+              }`
+            }
+          >
+            <Icon size={20} />
+            <span className="text-[10px] font-medium">{label.split(" ")[0]}</span>
+          </NavLink>
+        ))}
       </nav>
-
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-stone-900/20 backdrop-blur-sm z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 };
@@ -183,4 +237,3 @@ export default function App() {
     </Router>
   );
 }
-

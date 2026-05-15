@@ -1,21 +1,45 @@
 import { useState, useEffect } from "react";
 import { motion } from "motion/react";
-import { 
-  CloudSun, 
-  TrendingUp, 
-  Sprout, 
-  MessageSquare, 
-  ArrowRight,
+import {
   Droplets,
-  Thermometer,
   Wind,
+  Sun,
   MapPin,
+  TrendingUp,
   TrendingDown,
-  AlertCircle
+  Sprout,
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
+  MessageSquare,
+  Thermometer,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { weatherService, marketService, cropService } from "../services/api";
 import { WeatherData, MarketPrice, CropRecommendation, UserPrefs } from "../types";
+
+const StatPill = ({ icon: Icon, label, value, color }: { icon: any; label: string; value: string; color: string }) => (
+  <div className="flex flex-col gap-1 p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
+    <Icon size={16} className="opacity-70" />
+    <p className="text-lg font-semibold">{value}</p>
+    <p className="text-[11px] font-medium opacity-60 uppercase tracking-wider">{label}</p>
+  </div>
+);
+
+const MiniSparkline = ({ up }: { up: boolean }) => {
+  const heights = [30, 50, 40, 65, 55, 80, 70, 90];
+  return (
+    <div className="flex items-end gap-0.5 h-8 w-16">
+      {heights.map((h, i) => (
+        <div
+          key={i}
+          className={`flex-1 rounded-sm transition-all ${up ? "bg-emerald-500/30" : "bg-red-400/30"} ${i === heights.length - 1 ? (up ? "bg-emerald-500" : "bg-red-400") : ""}`}
+          style={{ height: `${h}%` }}
+        />
+      ))}
+    </div>
+  );
+};
 
 export default function Dashboard() {
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -27,179 +51,239 @@ export default function Dashboard() {
   useEffect(() => {
     const prefs = JSON.parse(localStorage.getItem("user_prefs") || "{}");
     setUserPrefs(prefs);
-
-    const fetchData = async () => {
-      try {
-        const [w, p, c] = await Promise.all([
-          weatherService.getWeather(prefs.location),
-          marketService.getPrices(prefs.currency),
-          cropService.getRecommendations()
-        ]);
-        setWeather(w);
-        setPrices(p);
-        setCrops(c);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    Promise.all([
+      weatherService.getWeather(prefs.location),
+      marketService.getPrices(prefs.currency),
+      cropService.getRecommendations(),
+    ]).then(([w, p, c]) => {
+      setWeather(w);
+      setPrices(p);
+      setCrops(c);
+      setLoading(false);
+    });
   }, []);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-      <div className="w-12 h-12 border-4 border-sage-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-stone-500 font-black tracking-widest uppercase text-xs">Synchronizing Agronomic Data...</p>
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+      <div className="w-8 h-8 border-2 border-sage-600 border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm text-stone-400 font-medium">Loading dashboard...</p>
     </div>
   );
 
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+
   return (
-    <div className="max-w-7xl mx-auto space-y-10 pb-24 mt-4 px-4">
-      
-      {/* Google Weather Style Hero Card */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 space-y-5">
+
+      {/* Page Header */}
+      <div>
+        <p className="text-xs font-medium text-stone-400 uppercase tracking-widest">{today}</p>
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white mt-0.5">Good morning, Farmer</h1>
+      </div>
+
+      {/* === WEATHER HERO — Google Weather Style === */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative p-10 bg-gradient-to-br from-sky-400 to-sky-600 dark:from-stone-800 dark:to-sky-900/50 rounded-[3rem] text-white shadow-2xl overflow-hidden group"
+        className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-sky-500 via-sky-500 to-blue-600 dark:from-sky-800 dark:via-sky-900 dark:to-blue-950 text-white p-6 shadow-lg shadow-sky-200/40 dark:shadow-none"
       >
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-          <div className="space-y-4">
-             <div className="flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 w-fit">
-                <MapPin size={18} className="text-sky-100" />
-                <span className="font-black uppercase tracking-widest text-xs uppercase">{userPrefs?.location}</span>
-             </div>
-             <div className="flex items-end gap-1">
-                <h2 className="text-8xl font-black tracking-tighter">{weather?.temp}°</h2>
-                <div className="mb-4">
-                   <p className="text-2xl font-bold">Mostly Sunny</p>
-                   <p className="text-sky-100 opacity-60 text-sm font-medium">Feels like {weather?.temp! + 2}°</p>
-                </div>
-             </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <MapPin size={13} className="opacity-70" />
+              <span className="text-sm font-medium opacity-80">{userPrefs?.location}</span>
+            </div>
+            <div className="flex items-end gap-2">
+              <span className="text-7xl font-bold tracking-tighter leading-none">{weather?.temp}°</span>
+              <div className="mb-1">
+                <p className="text-lg font-semibold">Mostly Sunny</p>
+                <p className="text-sm opacity-60">Feels like {(weather?.temp ?? 0) + 2}°C</p>
+              </div>
+            </div>
+            <p className="text-sm mt-2 opacity-60 font-medium">
+              H:{(weather?.temp ?? 0) + 4}° · L:{(weather?.temp ?? 0) - 3}°
+            </p>
           </div>
-          <motion.div 
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-            className="p-4 bg-white/5 backdrop-blur-xl rounded-[2.5rem] border border-white/10"
-          >
-            <CloudSun size={120} className="text-white drop-shadow-2xl" />
-          </motion.div>
+          <Sun size={72} className="opacity-20 shrink-0 mt-1" />
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-12 relative z-10">
-           <div className="p-6 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              <Droplets size={24} className="mb-2 opacity-60" />
-              <p className="text-2xl font-black">{weather?.humidity}%</p>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Humidity</p>
-           </div>
-           <div className="p-6 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              <Wind size={24} className="mb-2 opacity-60" />
-              <p className="text-2xl font-black">14<span className="text-sm">km/h</span></p>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Wind Flow</p>
-           </div>
-           <div className="p-6 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              <Thermometer size={24} className="mb-2 opacity-60" />
-              <p className="text-2xl font-black">1.2<span className="text-sm">UV</span></p>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Radiation</p>
-           </div>
-           <div className="p-6 bg-white/10 rounded-3xl border border-white/10 backdrop-blur-md hover:bg-white/20 transition-all">
-              <AlertCircle size={24} className="mb-2 opacity-60" />
-              <p className="text-2xl font-black">Stable</p>
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60">Atmosphere</p>
-           </div>
+        <div className="grid grid-cols-3 gap-3 mt-5">
+          <StatPill icon={Droplets} label="Humidity" value={`${weather?.humidity}%`} color="" />
+          <StatPill icon={Wind} label="Wind" value="14 km/h" color="" />
+          <StatPill icon={Thermometer} label="Rainfall" value={`${weather?.rainfall}mm`} color="" />
         </div>
-        
-        {/* Background decorative elements */}
-        <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-white/5 rounded-full blur-[100px]" />
+
+        {/* Forecast pills */}
+        <div className="flex gap-2 mt-4 overflow-x-auto pb-1 scrollbar-hide">
+          {weather?.forecast.map((day, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 px-3 py-2 bg-white/10 rounded-xl shrink-0">
+              <span className="text-[11px] font-medium opacity-70">{i === 0 ? "Today" : day.day}</span>
+              <Sun size={14} className="opacity-80" />
+              <span className="text-sm font-semibold">{day.temp}°</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Background glow */}
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Market Trend Preview */}
-        <div className="lg:col-span-2 space-y-6">
-           <div className="flex items-center justify-between px-2">
-              <h3 className="text-xl font-black tracking-tight uppercase">Market Intelligence</h3>
-              <Link to="/market" className="text-sage-600 font-bold text-sm flex items-center gap-1 group">
-                 Terminal View <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {prices.slice(0, 2).map((price, i) => (
-                <div key={i} className="glass-card p-8 bg-white dark:bg-stone-900 border-stone-100 dark:border-stone-800 flex justify-between items-center group cursor-pointer hover:border-sage-400 transition-all shadow-sm">
-                   <div>
-                      <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-1">{price.crop} Market</p>
-                      <h4 className="text-2xl font-black tracking-tighter">{price.currency} {price.price.toLocaleString()}</h4>
-                      <div className={`mt-2 inline-flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg ${price.trend === 'up' ? 'text-green-600 bg-green-50 dark:bg-green-900/10' : 'text-red-600 bg-red-50 dark:bg-red-900/10'}`}>
-                         {price.trend === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                         {price.trend === 'up' ? '+3.1%' : '-0.8%'}
-                      </div>
-                   </div>
-                   <div className="h-12 w-20 flex items-end gap-1 px-1">
-                      {[0.3, 0.5, 0.4, 0.7, 0.6, 0.9].map((h, j) => (
-                        <div key={j} className={`flex-1 rounded-t-sm ${price.trend === 'up' ? 'bg-green-500/20' : 'bg-red-500/20'} ${j === 5 ? (price.trend === 'up' ? 'bg-green-500' : 'bg-red-50') : ''}`} style={{ height: `${h * 100}%` }} />
-                      ))}
-                   </div>
+      {/* === TWO COLUMN GRID === */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        {/* Market Preview */}
+        <div className="lg:col-span-2 bg-white dark:bg-[#111113] rounded-2xl border border-stone-200/80 dark:border-stone-800/80 overflow-hidden shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 dark:border-stone-800/60">
+            <div>
+              <h2 className="text-sm font-semibold text-stone-900 dark:text-white">Market Overview</h2>
+              <p className="text-xs text-stone-400 mt-0.5">Live commodity prices · {userPrefs?.currency}</p>
+            </div>
+            <Link to="/market" className="flex items-center gap-1 text-xs font-medium text-sage-600 hover:text-sage-700 transition-colors">
+              Full view <ArrowRight size={13} />
+            </Link>
+          </div>
+          <div className="divide-y divide-stone-100 dark:divide-stone-800/50">
+            {prices.slice(0, 5).map((price, i) => {
+              const isUp = price.trend === "up";
+              const change = isUp ? "+3.12%" : "-1.84%";
+              return (
+                <div key={i} className="flex items-center justify-between px-5 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${isUp ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" : "bg-red-50 dark:bg-red-900/20 text-red-500"}`}>
+                      {price.crop.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-stone-900 dark:text-white">{price.crop}</p>
+                      <p className="text-[11px] text-stone-400">per {price.unit}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <MiniSparkline up={isUp} />
+                    <div className="text-right min-w-[80px]">
+                      <p className="text-sm font-semibold text-stone-900 dark:text-white">{price.currency} {price.price.toFixed(2)}</p>
+                      <p className={`text-xs font-medium flex items-center justify-end gap-0.5 ${isUp ? "text-emerald-600" : "text-red-500"}`}>
+                        {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        {change}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              ))}
-           </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* AI Insight Sidebar */}
-        <div className="space-y-6">
-           <h3 className="text-xl font-black tracking-tight uppercase px-2 text-sage-600">Neural Insight</h3>
-           <div className="p-8 bg-sage-900 rounded-[2.5rem] text-white space-y-6 relative overflow-hidden shadow-2xl">
-              <div className="flex items-center gap-3 relative z-10">
-                 <div className="p-3 bg-sage-800 rounded-2xl"><Sprout size={24} className="text-sage-400" /></div>
-                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-sage-500">Routing: {userPrefs?.aiMode}</p>
-                    <p className="font-bold">Next Harvest Window</p>
-                 </div>
+        {/* Right Column */}
+        <div className="space-y-4">
+
+          {/* AI Insight Card */}
+          <div className="bg-sage-900 dark:bg-sage-950 rounded-2xl p-5 text-white shadow-sm">
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="w-7 h-7 bg-sage-700 rounded-lg flex items-center justify-center">
+                <Sprout size={14} className="text-sage-300" />
               </div>
-              <p className="text-sage-200 font-medium leading-relaxed relative z-10">
-                 The current soil moisture index in <span className="text-white font-bold">{userPrefs?.location}</span> is optimal. Based on meteorological patterns, consider nitrogen enrichment for your <span className="text-white font-bold">{userPrefs?.crop}</span> field within 48 hours.
-              </p>
-              <Link to="/chat" className="flex items-center justify-between p-4 bg-sage-800 hover:bg-sage-700 transition-all rounded-3xl group relative z-10">
-                 <span className="font-bold text-sm">Deploy Deep Assistant</span>
-                 <MessageSquare size={20} className="group-hover:scale-110 transition-transform" />
-              </Link>
-              <div className="absolute -top-20 -right-20 w-64 h-64 bg-sage-600/20 rounded-full blur-[80px]" />
-           </div>
+              <div>
+                <p className="text-[11px] font-medium text-sage-400 uppercase tracking-wider">AI Insight</p>
+                <p className="text-sm font-semibold text-white">Field Advisory</p>
+              </div>
+            </div>
+            <p className="text-sm text-sage-200 leading-relaxed">
+              Soil moisture in <span className="text-white font-medium">{userPrefs?.location}</span> is optimal for{" "}
+              <span className="text-white font-medium">{userPrefs?.crop}</span> growth. Consider nitrogen enrichment within 48h.
+            </p>
+            <Link
+              to="/chat"
+              className="mt-4 flex items-center justify-between p-3 bg-sage-800 hover:bg-sage-700 rounded-xl transition-colors group"
+            >
+              <span className="text-sm font-medium">Ask AI Assistant</span>
+              <MessageSquare size={15} className="group-hover:scale-110 transition-transform" />
+            </Link>
+          </div>
+
+          {/* Alert Card */}
+          <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-900 dark:text-amber-300">Weather Alert</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1 leading-relaxed">
+                  Light rain expected Wednesday. Adjust irrigation schedule for {userPrefs?.crop}.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Recommended Grid - Bento Style */}
-      <section className="space-y-6">
-         <h3 className="text-xl font-black tracking-tight uppercase px-2">Adaptive Recommendations</h3>
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {crops.map((crop, i) => (
-              <motion.div 
-                key={i}
-                whileHover={{ y: -5 }}
-                className="p-8 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2.5rem] flex flex-col justify-between shadow-sm group cursor-pointer"
-              >
-                <div className="flex justify-between items-start mb-6">
-                   <div className="w-14 h-14 bg-stone-50 dark:bg-stone-800 rounded-2xl flex items-center justify-center text-sage-600 group-hover:bg-sage-600 group-hover:text-white transition-all">
-                      <Sprout size={28} />
-                   </div>
-                   <div className={`px-4 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${crop.risk === 'Low' ? 'bg-green-50 text-green-700 dark:bg-green-900/20' : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20'}`}>
-                      {crop.risk} Risk
-                   </div>
+      {/* === CROP STATUS CARDS === */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-stone-900 dark:text-white">Crop Recommendations</h2>
+          <Link to="/crops" className="flex items-center gap-1 text-xs font-medium text-sage-600 hover:text-sage-700 transition-colors">
+            Details <ArrowRight size={13} />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {crops.map((crop, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.07 }}
+              className="bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-sage-300 dark:hover:border-sage-700 transition-all group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-sage-50 dark:bg-sage-900/20 rounded-lg flex items-center justify-center group-hover:bg-sage-600 transition-colors">
+                    <Sprout size={15} className="text-sage-600 group-hover:text-white transition-colors" />
+                  </div>
+                  <p className="text-sm font-semibold text-stone-900 dark:text-white">{crop.name}</p>
                 </div>
-                <div>
-                   <h4 className="text-2xl font-black mb-1">{crop.name}</h4>
-                   <p className="text-sm text-stone-500 font-medium mb-4">Strategic match for your biome.</p>
-                   <div className="flex items-center gap-4">
-                      <div className="flex-1 h-2 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
-                         <motion.div initial={{ width: 0 }} whileInView={{ width: `${crop.suitability}%` }} className="h-full bg-sage-600" />
-                      </div>
-                      <span className="text-sm font-black text-stone-900 dark:text-white">{crop.suitability}%</span>
-                   </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  crop.risk === "Low"
+                    ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400"
+                    : "bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400"
+                }`}>
+                  {crop.risk} risk
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5">
+                <div className="flex-1 h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${crop.suitability}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-sage-600 rounded-full"
+                  />
                 </div>
-              </motion.div>
-            ))}
-         </div>
-      </section>
+                <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 shrink-0">{crop.suitability}%</span>
+              </div>
+              <p className="text-xs text-stone-400 mt-2 leading-relaxed">{crop.advice}</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
 
+      {/* === QUICK ACTIONS === */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Check Weather", icon: Sun, to: "/weather", color: "bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400" },
+          { label: "Market Prices", icon: TrendingUp, to: "/market", color: "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400" },
+          { label: "Crop Planner", icon: Sprout, to: "/crops", color: "bg-sage-50 dark:bg-sage-900/20 text-sage-600 dark:text-sage-400" },
+          { label: "AI Assistant", icon: MessageSquare, to: "/chat", color: "bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400" },
+        ].map(({ label, icon: Icon, to, color }) => (
+          <Link
+            key={to}
+            to={to}
+            className="flex items-center gap-2.5 p-3.5 bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 rounded-xl hover:shadow-sm hover:border-stone-300 dark:hover:border-stone-700 transition-all"
+          >
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${color}`}>
+              <Icon size={14} />
+            </div>
+            <span className="text-xs font-medium text-stone-700 dark:text-stone-300">{label}</span>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

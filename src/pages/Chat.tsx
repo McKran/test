@@ -1,140 +1,248 @@
-import { useState } from "react";
-import { 
-  Bot, 
-  User, 
-  Sparkles, 
-  Paperclip, 
+import { useState, useRef, useEffect } from "react";
+import {
+  Bot,
+  User,
+  Sparkles,
   ArrowUp,
-  BrainCircuit,
-  MessageSquare,
-  Cpu
+  Sprout,
+  CloudSun,
+  TrendingUp,
+  Droplets,
+  RotateCcw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface Message {
   role: "user" | "ai";
   content: string;
-  source?: string;
+  time?: string;
+}
+
+const SUGGESTIONS = [
+  { icon: Sprout, label: "Best crop for this season?", color: "text-sage-600 bg-sage-50 dark:bg-sage-900/20" },
+  { icon: CloudSun, label: "Rain impact on harvest", color: "text-sky-600 bg-sky-50 dark:bg-sky-900/20" },
+  { icon: TrendingUp, label: "Market outlook this week", color: "text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20" },
+  { icon: Droplets, label: "Irrigation schedule advice", color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20" },
+];
+
+const MOCK_RESPONSES: Record<string, string> = {
+  default: "Based on your farm's current conditions, I'd recommend monitoring soil moisture levels closely over the next 48 hours. The forecasted temperature drop on Wednesday could affect nutrient uptake in your crops. Consider a light phosphorus supplement before the weekend.",
+  season: "For this season in your region, the top-performing crops are Corn (92% suitability), Millet (85%), and Soybeans (78%). Corn has the highest yield potential given current soil moisture and temperature forecasts.",
+  rain: "The expected rainfall on Wednesday (12–18mm) will be beneficial but watch for waterlogging in low-lying areas. I'd suggest postponing any fertilizer application by at least 24 hours after rainfall to prevent nutrient runoff.",
+  market: "This week, Wheat prices are up 1.4% and Soybeans showing a strong +3.2% gain. Rice remains stable. If you're planning a sale, the next 5–7 days look favorable for Soybeans based on current commodity trends.",
+  irrigation: "Based on current evapotranspiration rates and soil moisture readings, your next full irrigation cycle should begin in approximately 2 days. Early morning (5–7 AM) irrigation reduces evaporation loss by up to 30% in your climate zone.",
+};
+
+function getResponse(input: string): string {
+  const lower = input.toLowerCase();
+  if (lower.includes("season") || lower.includes("crop")) return MOCK_RESPONSES.season;
+  if (lower.includes("rain") || lower.includes("harvest")) return MOCK_RESPONSES.rain;
+  if (lower.includes("market") || lower.includes("price")) return MOCK_RESPONSES.market;
+  if (lower.includes("irrigation") || lower.includes("water")) return MOCK_RESPONSES.irrigation;
+  return MOCK_RESPONSES.default;
+}
+
+function getTime() {
+  return new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Greetings. I am the AI Agriculture Assistant, operating on the modular intelligence framework. How can I assist your farming operations today?", source: "DeepSeek-R1" }
+    {
+      role: "ai",
+      content: "Hello! I'm your AI Agriculture Assistant. Ask me anything about your crops, weather impact, market trends, or farming advice.",
+      time: getTime(),
+    },
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const userPrefs = JSON.parse(localStorage.getItem("user_prefs") || "{}");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    
-    const userMsg: Message = { role: "user", content: input };
-    setMessages(prev => [...prev, userMsg]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
+  const handleSend = (text?: string) => {
+    const msg = text ?? input;
+    if (!msg.trim() || isTyping) return;
+
+    setMessages(prev => [...prev, { role: "user", content: msg, time: getTime() }]);
     setInput("");
     setIsTyping(true);
 
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
     setTimeout(() => {
-      const aiMsg: Message = { 
-        role: "ai", 
-        content: `Based on your request regarding "${input}", I've analyzed local soil data and current market volatility. I recommend early irrigation cycles this week.`,
-        source: "Qwen-2.5"
-      };
-      setMessages(prev => [...prev, aiMsg]);
+      setMessages(prev => [
+        ...prev,
+        { role: "ai", content: getResponse(msg), time: getTime() },
+      ]);
       setIsTyping(false);
-    }, 1500);
+    }, 1200 + Math.random() * 600);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+  };
+
+  const showSuggestions = messages.length <= 1;
+
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-160px)] flex flex-col relative mt-4">
-      
-      {/* Top Model Indicator */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20 flex items-center gap-4 p-2 bg-white/80 dark:bg-stone-900/80 backdrop-blur-md rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm">
-         <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-sage-600 flex items-center justify-center text-white shadow-sm"><Cpu size={14} /></div>
-            <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center text-white shadow-sm"><BrainCircuit size={14} /></div>
-         </div>
-         <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 px-2">Agri-Neural Routing Active</span>
+    <div className="flex flex-col h-[calc(100vh-56px)] lg:h-screen max-w-3xl mx-auto w-full">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 bg-sage-600 rounded-xl flex items-center justify-center shadow-sm">
+            <Bot size={16} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-stone-900 dark:text-white">AgriAI Assistant</p>
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              <p className="text-[11px] text-stone-400 font-medium">
+                {userPrefs?.aiMode ? `${userPrefs.aiMode} mode` : "Active"}
+              </p>
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => setMessages([{ role: "ai", content: "Hello! I'm your AI Agriculture Assistant. Ask me anything about your crops, weather impact, market trends, or farming advice.", time: getTime() }])}
+          className="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+          title="Clear conversation"
+        >
+          <RotateCcw size={15} />
+        </button>
       </div>
 
-      {/* Message History */}
-      <div className="flex-1 overflow-y-auto pt-20 pb-40 space-y-8 px-4 scrollbar-hide">
-        <AnimatePresence>
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 scroll-smooth">
+
+        <AnimatePresence initial={false}>
           {messages.map((m, i) => (
-            <motion.div 
+            <motion.div
               key={i}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-6 ${m.role === 'ai' ? 'max-w-3xl' : 'max-w-xl ml-auto flex-row-reverse'}`}
+              transition={{ duration: 0.2 }}
+              className={`flex gap-3 ${m.role === "user" ? "flex-row-reverse" : ""}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${m.role === 'ai' ? 'bg-sage-600 text-white' : 'bg-stone-100 dark:bg-stone-800 text-stone-500'}`}>
-                {m.role === 'ai' ? <Bot size={20} /> : <User size={20} />}
+              {/* Avatar */}
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                m.role === "ai" ? "bg-sage-600 text-white" : "bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300"
+              }`}>
+                {m.role === "ai" ? <Bot size={14} /> : <User size={14} />}
               </div>
-              <div className="space-y-4">
-                <div className={`p-6 rounded-[2.5rem] text-lg leading-relaxed shadow-sm ${m.role === 'ai' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border border-stone-100 dark:border-stone-800' : 'bg-sage-600 text-white font-medium'}`}>
+
+              {/* Bubble */}
+              <div className={`flex flex-col gap-1 max-w-[80%] ${m.role === "user" ? "items-end" : "items-start"}`}>
+                <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+                  m.role === "ai"
+                    ? "bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 text-stone-800 dark:text-stone-200 shadow-sm"
+                    : "bg-sage-600 text-white"
+                }`}>
                   {m.content}
                 </div>
-                {m.source && (
-                  <div className="flex items-center gap-2 text-[10px] font-black text-stone-400 uppercase tracking-widest px-4">
-                     <Sparkles size={12} className="text-sage-500" />
-                     Routed via {m.source}
-                  </div>
-                )}
+                <div className={`flex items-center gap-1.5 px-1 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+                  {m.role === "ai" && <Sparkles size={10} className="text-sage-500" />}
+                  <span className="text-[10px] text-stone-400 font-medium">{m.time}</span>
+                </div>
               </div>
             </motion.div>
           ))}
+
+          {/* Typing indicator */}
           {isTyping && (
-            <div className="flex gap-6 max-w-3xl">
-              <div className="w-10 h-10 rounded-xl bg-sage-600 text-white flex items-center justify-center shrink-0 animate-pulse">
-                <Bot size={20} />
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="flex gap-3"
+            >
+              <div className="w-7 h-7 rounded-lg bg-sage-600 text-white flex items-center justify-center shrink-0">
+                <Bot size={14} />
               </div>
-              <div className="flex gap-2 items-center p-6 bg-white dark:bg-stone-900 rounded-[2.5rem] border border-stone-100 dark:border-stone-800">
-                 <div className="w-2 h-2 bg-stone-300 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                 <div className="w-2 h-2 bg-stone-300 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                 <div className="w-2 h-2 bg-stone-300 rounded-full animate-bounce" />
+              <div className="px-4 py-3 rounded-2xl bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-stone-300 dark:bg-stone-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                <span className="w-1.5 h-1.5 bg-stone-300 dark:bg-stone-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                <span className="w-1.5 h-1.5 bg-stone-300 dark:bg-stone-600 rounded-full animate-bounce" />
               </div>
-            </div>
+            </motion.div>
           )}
         </AnimatePresence>
+
+        <div ref={bottomRef} />
       </div>
 
-      {/* ChatGPT Style Input Bar */}
-      <div className="absolute bottom-8 left-4 right-4 z-30">
-        <div className="relative glass-card p-2 bg-white dark:bg-stone-900 border-2 border-stone-200 dark:border-stone-800 rounded-[2.5rem] shadow-2xl focus-within:border-sage-600 transition-all max-w-3xl mx-auto">
-          <div className="flex items-center gap-4 px-4 py-2">
-            <button className="p-2 text-stone-400 hover:text-sage-600 transition-colors">
-              <Paperclip size={24} />
-            </button>
-            <textarea 
-              rows={1}
-              placeholder="Ask the AI about your crops..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-              className="flex-1 bg-transparent border-none focus:ring-0 text-lg font-medium dark:text-white resize-none py-2"
-            />
-            <motion.button 
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleSend}
-              className={`p-4 rounded-full transition-all flex items-center justify-center ${input.trim() ? 'bg-sage-600 text-white shadow-lg shadow-sage-200' : 'bg-stone-100 dark:bg-stone-800 text-stone-400 cursor-not-allowed'}`}
-              disabled={!input.trim()}
-            >
-              <ArrowUp size={24} strokeWidth={3} />
-            </motion.button>
-          </div>
-          <div className="flex items-center gap-6 px-6 py-2 border-t border-stone-50 dark:border-stone-800/30">
-             <div className="flex items-center gap-2 text-[10px] font-black text-stone-400 uppercase tracking-widest">
-                <MessageSquare size={12} />
-                Global Knowledge base
-             </div>
-             <div className="flex items-center gap-2 text-[10px] font-black text-stone-400 uppercase tracking-widest">
-                <BrainCircuit size={12} />
-                Modular Routing
-             </div>
-          </div>
+      {/* Suggestions (show on fresh chat) */}
+      <AnimatePresence>
+        {showSuggestions && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            className="px-4 sm:px-6 pb-3 shrink-0"
+          >
+            <p className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest mb-2">Quick prompts</p>
+            <div className="flex flex-wrap gap-2">
+              {SUGGESTIONS.map(({ icon: Icon, label, color }) => (
+                <button
+                  key={label}
+                  onClick={() => handleSend(label)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-[#111113] hover:border-sage-400 dark:hover:border-sage-700 transition-all ${color.split(" ")[0]}`}
+                >
+                  <Icon size={12} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input Bar — ChatGPT Style */}
+      <div className="px-4 sm:px-6 pb-5 pt-2 shrink-0 border-t border-stone-100 dark:border-stone-800/60 bg-white/80 dark:bg-[#111113]/80 backdrop-blur-xl">
+        <div className={`flex items-end gap-2 bg-white dark:bg-[#111113] border rounded-2xl px-4 py-3 shadow-sm transition-all ${
+          input.trim() ? "border-sage-400 dark:border-sage-700" : "border-stone-200 dark:border-stone-800"
+        }`}>
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            placeholder="Ask about your crops, markets, or weather..."
+            value={input}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
+            className="flex-1 bg-transparent text-sm text-stone-900 dark:text-stone-100 placeholder:text-stone-400 resize-none focus:outline-none leading-relaxed"
+            style={{ maxHeight: "160px" }}
+          />
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => handleSend()}
+            disabled={!input.trim() || isTyping}
+            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+              input.trim() && !isTyping
+                ? "bg-sage-600 hover:bg-sage-700 text-white shadow-sm"
+                : "bg-stone-100 dark:bg-stone-800 text-stone-400 cursor-not-allowed"
+            }`}
+          >
+            <ArrowUp size={15} strokeWidth={2.5} />
+          </motion.button>
         </div>
-        <p className="text-[10px] text-center mt-4 text-stone-400 font-bold uppercase tracking-widest">AI can make mistakes. Verify critical agronomic decisions.</p>
+        <p className="text-[10px] text-center text-stone-400 mt-2 font-medium">
+          AI responses are for guidance only · Verify critical decisions
+        </p>
       </div>
-
     </div>
   );
 }

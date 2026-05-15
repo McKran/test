@@ -1,59 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-roboto: "Roboto", sans-serif;
-  
-  --color-sage-50: #f4f7f4;
-  --color-sage-100: #e2ede2;
-  --color-sage-200: #c9dbc9;
-  --color-sage-300: #a2c1a2;
-  --color-sage-400: #76a176;
-  --color-sage-500: #578457;
-  --color-sage-600: #446a44;
-  --color-sage-700: #385538;
-  --color-sage-800: #2f452f;
-  --color-sage-900: #283a28;
 
-  --color-stone-50: #f9f8f6;
-  --color-stone-100: #f1f0ec;
-  --color-stone-200: #e4e3de;
-  --color-stone-300: #d1cfc7;
-  --color-stone-400: #b5b1a5;
-  --color-stone-500: #9c9789;
-  --color-stone-600: #847f71;
-  --color-stone-700: #6e6a5e;
-  --color-stone-800: #5b584f;
-  --color-stone-900: #4b4941;
+  --color-sage-50: #f2f7f2;
+  --color-sage-100: #deeede;
+  --color-sage-200: #bddcbd;
+  --color-sage-300: #92c292;
+  --color-sage-400: #65a565;
+  --color-sage-500: #4a8b4a;
+  --color-sage-600: #3a7a3a;
+  --color-sage-700: #2f6230;
+  --color-sage-800: #274f28;
+  --color-sage-900: #1e3d1f;
+  --color-sage-950: #122413;
+
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
 }
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
   body {
-    @apply bg-stone-50 text-stone-900 antialiased transition-colors duration-300;
+    @apply bg-[#f5f5f7] text-stone-900 antialiased;
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
   .dark body {
-    @apply bg-stone-900 text-stone-100;
+    @apply bg-[#0a0a0b] text-stone-100;
+  }
+
+  .dark {
+    color-scheme: dark;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.glass-card {
-  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm rounded-3xl transition-all duration-300;
-}
-.dark .glass-card {
-  @apply bg-stone-800/70 border-white/5;
-}
-
-.bento-card {
-  @apply bg-white border border-stone-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300;
-}
-.dark .bento-card {
-  @apply bg-stone-800 border-stone-700 shadow-xl;
+@layer utilities {
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-sm rounded-2xl transition-all duration-200;
+  }
+  .dark .glass-card {
+    @apply bg-stone-900/70 border-white/5;
+  }
 }
 
 .markdown-body {
-  @apply prose prose-stone max-w-none transition-all;
+  @apply prose prose-stone max-w-none;
 }
 .dark .markdown-body {
   @apply prose-invert;

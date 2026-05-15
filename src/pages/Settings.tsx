@@ -1,27 +1,93 @@
 import { useState, useEffect } from "react";
-import { 
-  User, 
-  MapPin, 
-  Globe, 
-  Moon, 
-  Sun, 
-  ChevronRight, 
-  LogOut, 
+import {
+  MapPin,
+  Globe,
+  Moon,
+  Sun,
+  ChevronRight,
+  LogOut,
   HelpCircle,
-  Zap,
   Brain,
   Scale,
   Type,
-  CloudLightning
+  CloudLightning,
+  RefreshCw,
+  Eye,
+  Sprout,
+  User,
+  ShieldCheck,
 } from "lucide-react";
 import { UserPrefs } from "../types";
 
-export default function Settings() {
+interface ToggleProps {
+  active: boolean;
+  onClick: () => void;
+}
+
+function Toggle({ active, onClick }: ToggleProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${active ? "bg-sage-600" : "bg-stone-200 dark:bg-stone-700"}`}
+      role="switch"
+      aria-checked={active}
+    >
+      <span
+        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${active ? "translate-x-5" : ""}`}
+      />
+    </button>
+  );
+}
+
+interface RowProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  children: React.ReactNode;
+  divider?: boolean;
+}
+
+function Row({ icon, iconBg, label, children, divider = true }: RowProps) {
+  return (
+    <div className={`flex items-center justify-between px-4 py-3.5 ${divider ? "border-b border-stone-100 dark:border-stone-800/60" : ""}`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-8 h-8 ${iconBg} rounded-lg flex items-center justify-center text-white shrink-0`}>
+          {icon}
+        </div>
+        <span className="text-sm font-medium text-stone-900 dark:text-stone-100">{label}</span>
+      </div>
+      <div className="flex items-center gap-2 text-stone-400">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="px-1 text-xs font-semibold text-stone-400 uppercase tracking-widest mb-1.5">{children}</p>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl overflow-hidden shadow-sm">
+      {children}
+    </div>
+  );
+}
+
+export default function SettingsPage() {
   const [prefs, setPrefs] = useState<UserPrefs | null>(null);
+  const [isDark, setIsDark] = useState(false);
+  const [fontTheme, setFontTheme] = useState("Inter");
+  const [dataRefresh, setDataRefresh] = useState(true);
+  const [modelVisibility, setModelVisibility] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem("user_prefs");
     if (saved) setPrefs(JSON.parse(saved));
+    setIsDark(document.documentElement.classList.contains("dark"));
   }, []);
 
   const updatePref = (key: keyof UserPrefs, value: any) => {
@@ -29,152 +95,186 @@ export default function Settings() {
     const newPrefs = { ...prefs, [key]: value };
     setPrefs(newPrefs);
     localStorage.setItem("user_prefs", JSON.stringify(newPrefs));
-    if (key === 'theme') {
-      document.documentElement.classList.toggle('dark', value === 'dark');
+    if (key === "theme") {
+      document.documentElement.classList.toggle("dark", value === "dark");
+      setIsDark(value === "dark");
+    }
+  };
+
+  const toggleDark = () => {
+    const next = !isDark;
+    setIsDark(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("theme", next ? "dark" : "light");
+    if (prefs) updatePref("theme", next ? "dark" : "light");
+  };
+
+  const handleReset = () => {
+    if (confirm("Reset all settings? This will restart the setup wizard.")) {
+      localStorage.clear();
+      window.location.reload();
     }
   };
 
   if (!prefs) return null;
 
   return (
-    <div className="max-w-xl mx-auto space-y-10 pb-32 mt-10 px-4">
-      
-      {/* Header */}
-      <div className="flex flex-col items-center gap-4 text-center">
-         <div className="w-24 h-24 bg-stone-100 dark:bg-stone-800 rounded-full flex items-center justify-center text-sage-600 shadow-inner">
-            <User size={48} />
-         </div>
-         <div>
-           <h1 className="text-3xl font-black tracking-tight">System Configuration</h1>
-           <p className="text-stone-500 font-medium tracking-wide uppercase text-[10px] mt-1">Platform v2.4.1 (Stable)</p>
-         </div>
-      </div>
+    <div className="max-w-lg mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 space-y-6">
 
-      {/* iOS Style Grouped List */}
-      <div className="space-y-8">
-        
-        {/* Profile Group */}
-        <div className="space-y-2">
-          <p className="px-4 text-[10px] font-black uppercase text-stone-400 tracking-[0.2em]">Profile & Identity</p>
-          <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] overflow-hidden shadow-sm">
-            <SettingsItem 
-              icon={<MapPin size={20} />} 
-              iconColor="bg-blue-500" 
-              label="Farm Location" 
-              value={prefs.location} 
-            />
-            <SettingsItem 
-              icon={<Globe size={20} />} 
-              iconColor="bg-green-500" 
-              label="Country" 
-              value={prefs.country} 
-            />
-             <SettingsItem 
-              icon={<CloudLightning size={20} />} 
-              iconColor="bg-yellow-500" 
-              label="Market Currency" 
-              value={prefs.currency} 
-              isLast
-            />
-          </div>
+      {/* Profile Header */}
+      <div className="flex items-center gap-4 p-4 bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl shadow-sm">
+        <div className="w-12 h-12 bg-sage-50 dark:bg-sage-900/20 rounded-xl flex items-center justify-center">
+          <User size={24} className="text-sage-600 dark:text-sage-400" />
         </div>
-
-        {/* Intelligence Group */}
-        <div className="space-y-2">
-          <p className="px-4 text-[10px] font-black uppercase text-stone-400 tracking-[0.2em]">Intelligence Protocols</p>
-          <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] overflow-hidden shadow-sm">
-            <SettingsToggle 
-              icon={<Brain size={20} />} 
-              iconColor="bg-purple-500" 
-              label="Advanced Reasoning" 
-              active={prefs.aiMode === 'Analytical' || prefs.aiMode === 'expert'}
-              onClick={() => updatePref('aiMode', (prefs.aiMode === 'Analytical' || prefs.aiMode === 'expert') ? 'Creative' : 'Analytical')}
-            />
-            <SettingsItem 
-              icon={<Zap size={20} />} 
-              iconColor="bg-amber-500" 
-              label="Routing Strategy" 
-              value="Latency Optimized" 
-              isLast
-            />
-          </div>
-        </div>
-
-        {/* Interface Group */}
-        <div className="space-y-2">
-          <p className="px-4 text-[10px] font-black uppercase text-stone-400 tracking-[0.2em]">Interface Engine</p>
-          <div className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] overflow-hidden shadow-sm">
-            <SettingsToggle 
-              icon={prefs.theme === 'dark' ? <Moon size={20} /> : <Sun size={20} />} 
-              iconColor="bg-indigo-500" 
-              label="Dark Atmosphere" 
-              active={prefs.theme === 'dark'}
-              onClick={() => updatePref('theme', prefs.theme === 'dark' ? 'light' : 'dark')}
-            />
-            <SettingsItem 
-              icon={<Scale size={20} />} 
-              iconColor="bg-stone-500" 
-              label="Measurement System" 
-              value={prefs.units.toUpperCase()} 
-            />
-             <SettingsItem 
-              icon={<Type size={20} />} 
-              iconColor="bg-slate-500" 
-              label="Typography" 
-              value="Inter" 
-              isLast
-            />
-          </div>
-        </div>
-
-        {/* System Group */}
-        <div className="space-y-4 pt-4">
-           <button className="w-full flex items-center justify-center gap-3 p-5 bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-[2rem] text-red-600 font-bold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors shadow-sm">
-              <LogOut size={20} />
-              Reset All Telemetry
-           </button>
-           <button className="w-full flex items-center justify-center gap-3 p-5 text-stone-400 font-bold text-sm tracking-widest uppercase py-8 opacity-50 hover:opacity-100 transition-opacity">
-              <HelpCircle size={20} />
-              Open Global Protocol Docs
-           </button>
+        <div>
+          <p className="text-base font-semibold text-stone-900 dark:text-white">{prefs.location}</p>
+          <p className="text-xs text-stone-400 mt-0.5 font-medium">
+            {prefs.country} · {prefs.currency} · {prefs.crop}
+          </p>
         </div>
       </div>
-    </div>
-  );
-}
 
-function SettingsItem({ icon, iconColor, label, value, isLast = false }: { icon: React.ReactNode, iconColor: string, label: string, value: string, isLast?: boolean }) {
-  return (
-    <div className={`p-4 flex items-center justify-between hover:bg-stone-50 dark:hover:bg-stone-800/30 transition-all cursor-pointer ${!isLast ? 'border-b border-stone-50 dark:border-stone-800/50' : ''}`}>
-      <div className="flex items-center gap-4">
-        <div className={`w-9 h-9 ${iconColor} text-white rounded-xl flex items-center justify-center shadow-sm`}>
-          {icon}
-        </div>
-        <span className="font-bold text-stone-900 dark:text-white tracking-tight">{label}</span>
+      {/* === LOCATION & IDENTITY === */}
+      <div className="space-y-1.5">
+        <SectionLabel>Location & Identity</SectionLabel>
+        <Card>
+          <Row icon={<MapPin size={14} />} iconBg="bg-blue-500" label="Farm Location">
+            <span className="text-sm text-stone-400 font-medium truncate max-w-[140px]">{prefs.location}</span>
+            <ChevronRight size={15} />
+          </Row>
+          <Row icon={<Globe size={14} />} iconBg="bg-emerald-500" label="Country">
+            <span className="text-sm text-stone-400 font-medium">{prefs.country}</span>
+            <ChevronRight size={15} />
+          </Row>
+          <Row icon={<Sprout size={14} />} iconBg="bg-sage-600" label="Primary Crop">
+            <span className="text-sm text-stone-400 font-medium">{prefs.crop}</span>
+            <ChevronRight size={15} />
+          </Row>
+          <Row icon={<CloudLightning size={14} />} iconBg="bg-amber-500" label="Currency" divider={false}>
+            <span className="text-sm text-stone-400 font-medium">{prefs.currency}</span>
+            <ChevronRight size={15} />
+          </Row>
+        </Card>
       </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-bold text-stone-400">{value}</span>
-        <ChevronRight size={18} className="text-stone-200" />
-      </div>
-    </div>
-  );
-}
 
-function SettingsToggle({ icon, iconColor, label, active, onClick }: { icon: React.ReactNode, iconColor: string, label: string, active: boolean, onClick: () => void }) {
-  return (
-    <div className="p-4 flex items-center justify-between border-b border-stone-50 dark:border-stone-800/50">
-      <div className="flex items-center gap-4">
-        <div className={`w-9 h-9 ${iconColor} text-white rounded-xl flex items-center justify-center shadow-sm`}>
-          {icon}
-        </div>
-        <span className="font-bold text-stone-900 dark:text-white tracking-tight">{label}</span>
+      {/* === APPEARANCE === */}
+      <div className="space-y-1.5">
+        <SectionLabel>Appearance</SectionLabel>
+        <Card>
+          <Row icon={isDark ? <Moon size={14} /> : <Sun size={14} />} iconBg="bg-indigo-500" label="Dark Mode">
+            <Toggle active={isDark} onClick={toggleDark} />
+          </Row>
+          <Row icon={<Type size={14} />} iconBg="bg-slate-500" label="Font Style" divider={false}>
+            <div className="flex gap-1">
+              {["Inter", "System", "Mono"].map(f => (
+                <button
+                  key={f}
+                  onClick={() => setFontTheme(f)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${
+                    fontTheme === f
+                      ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-500"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </Row>
+        </Card>
       </div>
-      <button 
-        onClick={onClick}
-        className={`w-14 h-8 rounded-full transition-all relative ${active ? 'bg-sage-600' : 'bg-stone-200 dark:bg-stone-700'}`}
+
+      {/* === AI & INTELLIGENCE === */}
+      <div className="space-y-1.5">
+        <SectionLabel>AI & Intelligence</SectionLabel>
+        <Card>
+          <Row icon={<Brain size={14} />} iconBg="bg-purple-500" label="AI Mode">
+            <div className="flex gap-1">
+              {(["fast", "balanced", "expert"] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => updatePref("aiMode", m)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg capitalize transition-all ${
+                    prefs.aiMode === m
+                      ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-500"
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </Row>
+          <Row icon={<Eye size={14} />} iconBg="bg-pink-500" label="Show Model Routing">
+            <Toggle active={modelVisibility} onClick={() => setModelVisibility(v => !v)} />
+          </Row>
+          <Row icon={<ShieldCheck size={14} />} iconBg="bg-orange-500" label="AI Flexibility" divider={false}>
+            <div className="flex gap-1">
+              {(["strict", "flexible"] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => updatePref("aiFlexibility", f)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg capitalize transition-all ${
+                    prefs.aiFlexibility === f
+                      ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-500"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </Row>
+        </Card>
+      </div>
+
+      {/* === DATA & PREFERENCES === */}
+      <div className="space-y-1.5">
+        <SectionLabel>Data & Preferences</SectionLabel>
+        <Card>
+          <Row icon={<Scale size={14} />} iconBg="bg-stone-500" label="Units">
+            <div className="flex gap-1">
+              {(["kg", "ton", "gram"] as const).map(u => (
+                <button
+                  key={u}
+                  onClick={() => updatePref("units", u)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg transition-all ${
+                    prefs.units === u
+                      ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
+                      : "bg-stone-100 dark:bg-stone-800 text-stone-500"
+                  }`}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+          </Row>
+          <Row icon={<RefreshCw size={14} />} iconBg="bg-teal-500" label="Auto Refresh Data" divider={false}>
+            <Toggle active={dataRefresh} onClick={() => setDataRefresh(v => !v)} />
+          </Row>
+        </Card>
+      </div>
+
+      {/* === ACCOUNT === */}
+      <div className="space-y-1.5">
+        <SectionLabel>Account</SectionLabel>
+        <Card>
+          <Row icon={<HelpCircle size={14} />} iconBg="bg-blue-400" label="Documentation" divider={false}>
+            <ChevronRight size={15} />
+          </Row>
+        </Card>
+      </div>
+
+      {/* Reset */}
+      <button
+        onClick={handleReset}
+        className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold text-red-500 bg-white dark:bg-[#111113] border border-stone-200/80 dark:border-stone-800/80 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors shadow-sm"
       >
-        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-md ${active ? 'left-7' : 'left-1'}`} />
+        <LogOut size={15} />
+        Reset All Settings
       </button>
+
+      <p className="text-center text-[11px] text-stone-300 dark:text-stone-600 font-medium">AgriAI · Version 2.4.1</p>
     </div>
   );
 }
