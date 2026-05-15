@@ -1,0 +1,8 @@
+{
+  "name": "AI Agriculture Assistant",
+  "description": "A comprehensive AI-powered platform for data-driven farming, featuring real-time weather, crop recommendations, market price tracking, and intelligent agricultural advice.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}
