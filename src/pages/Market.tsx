@@ -6,6 +6,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { marketService, currencyService } from "../services/api";
 import { MarketPrice, UserPrefs, CurrencyRates } from "../types";
+import MarketInsightPanel from "../components/MarketInsightPanel";
 
 const ALL_CATEGORIES = [
   "All", "Grain", "Legume", "Vegetable", "Fruit",
@@ -60,6 +61,7 @@ export default function Market() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name"|"price"|"change">("name");
   const [sortDir, setSortDir] = useState<"asc"|"desc">("asc");
+  const [selectedCrop, setSelectedCrop] = useState<MarketPrice | null>(null);
 
   const loadData = useCallback(async (cur: string, cat: string) => {
     const [p, r] = await Promise.all([
@@ -106,6 +108,10 @@ export default function Market() {
     else { setSortBy(col); setSortDir("asc"); }
   };
 
+  const handleCropClick = (p: MarketPrice) => {
+    setSelectedCrop(prev => prev?.crop === p.crop ? null : p);
+  };
+
   const mult = UNIT_MULT[unit];
   const dec = UNIT_DEC[unit];
 
@@ -144,165 +150,197 @@ export default function Market() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 space-y-5">
+    <>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8 space-y-5">
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-0.5">
-            <BarChart3 size={16} className="text-sage-600" />
-            <h1 className="text-xl font-bold text-stone-900 dark:text-white">Markets</h1>
-            {refreshing && <RefreshCw size={13} className="animate-spin text-stone-400" />}
-          </div>
-          <p className="text-xs text-stone-400">
-            {filtered.length} of {prices.length} commodities
-            {rates && <> · <span className="font-medium text-stone-500 dark:text-stone-400">1 USD = {exchangeRate.toFixed(3)} {currency}</span></>}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Unit toggle */}
-          <div className="flex items-center gap-0.5 p-1 bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl">
-            <Scale size={12} className="text-stone-400 ml-1.5 shrink-0" />
-            {(["kg","ton","gram"] as UnitKey[]).map(u => (
-              <button key={u} onClick={() => setUnit(u)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-                  unit === u ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900" : "text-stone-500 hover:text-stone-700 dark:hover:text-stone-300"
-                }`}>{u}</button>
-            ))}
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <BarChart3 size={16} className="text-sage-600" />
+              <h1 className="text-xl font-bold text-stone-900 dark:text-white">Markets</h1>
+              {refreshing && <RefreshCw size={13} className="animate-spin text-stone-400" />}
+            </div>
+            <p className="text-xs text-stone-400">
+              {filtered.length} of {prices.length} commodities
+              {rates && <> · <span className="font-medium text-stone-500 dark:text-stone-400">1 USD = {exchangeRate.toFixed(3)} {currency}</span></>}
+            </p>
           </div>
 
-          {/* Currency */}
-          <div className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl">
-            <Globe size={13} className="text-stone-400 shrink-0" />
-            <select value={currency} onChange={e => handleCurrencyChange(e.target.value)}
-              className="text-xs font-semibold bg-transparent text-stone-900 dark:text-white focus:outline-none cursor-pointer">
-              {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Unit toggle */}
+            <div className="flex items-center gap-0.5 p-1 bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl">
+              <Scale size={12} className="text-stone-400 ml-1.5 shrink-0" />
+              {(["kg","ton","gram"] as UnitKey[]).map(u => (
+                <button key={u} onClick={() => setUnit(u)}
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                    unit === u ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900" : "text-stone-500 hover:text-stone-700 dark:hover:text-stone-300"
+                  }`}>{u}</button>
+              ))}
+            </div>
+
+            {/* Currency */}
+            <div className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl">
+              <Globe size={13} className="text-stone-400 shrink-0" />
+              <select value={currency} onChange={e => handleCurrencyChange(e.target.value)}
+                className="text-xs font-semibold bg-transparent text-stone-900 dark:text-white focus:outline-none cursor-pointer">
+                {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+              <input type="text" placeholder="Search crops..." value={search} onChange={e => setSearch(e.target.value)}
+                className="pl-8 pr-3 py-2 text-xs bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-600/30 dark:text-white w-36" />
+            </div>
+
+            <button onClick={handleRefresh} disabled={refreshing}
+              className="p-2 rounded-xl bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 text-stone-400 hover:text-stone-600 transition-colors">
+              <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            </button>
           </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-            <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-2 text-xs bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-600/30 dark:text-white w-36" />
-          </div>
-
-          <button onClick={handleRefresh} disabled={refreshing}
-            className="p-2 rounded-xl bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 text-stone-400 hover:text-stone-600 transition-colors">
-            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
-          </button>
-        </div>
-      </div>
-
-      {/* Category Pills */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
-        <Filter size={14} className="text-stone-400 shrink-0 mt-1.5" />
-        {ALL_CATEGORIES.map(c => (
-          <button key={c} onClick={() => handleCategoryChange(c)}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
-              category === c
-                ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
-                : "bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 text-stone-500 hover:border-stone-300"
-            }`}>{c}</button>
-        ))}
-      </div>
-
-      {/* Featured Cards */}
-      {featured.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {featured.map((p, i) => {
-            const isUp = p.changePercent > 0.5;
-            const isStable = Math.abs(p.changePercent) <= 0.5;
-            const displayPrice = (p.price * mult).toFixed(dec);
-            return (
-              <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.06 }}
-                className="bg-white dark:bg-[#16161a] border border-stone-200/80 dark:border-stone-800/50 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group cursor-pointer">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest">Spot Price</p>
-                    <p className="text-sm font-bold text-stone-900 dark:text-white mt-0.5 flex items-center gap-1">
-                      {p.crop}
-                      <ArrowUpRight size={12} className="text-stone-300 group-hover:text-sage-500 transition-colors" />
-                    </p>
-                    <p className="text-[10px] text-stone-400">{p.category}</p>
-                  </div>
-                  <MiniSparkline up={isUp} stable={isStable} />
-                </div>
-                <p className="text-xl font-bold text-stone-900 dark:text-white tabular-nums">
-                  {currency} {displayPrice}
-                </p>
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[11px] text-stone-400">per {UNIT_LABEL[unit]}</span>
-                  <ChangeTag value={p.changePercent} />
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Main Table */}
-      <div className="bg-white dark:bg-[#16161a] border border-stone-200/80 dark:border-stone-800/50 rounded-2xl overflow-hidden shadow-sm">
-        <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-stone-100 dark:border-stone-800/50">
-          <div className="col-span-1"><p className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">#</p></div>
-          <div className="col-span-4"><SortBtn col="name" label="Commodity" /></div>
-          <div className="col-span-3 flex justify-end"><SortBtn col="price" label={`Price/${unit}`} /></div>
-          <div className="col-span-2 hidden sm:flex justify-end"><SortBtn col="change" label="24h %" /></div>
-          <div className="col-span-2 hidden sm:block" />
         </div>
 
-        <div className="divide-y divide-stone-100/80 dark:divide-stone-800/30">
-          {filtered.length === 0 ? (
-            <div className="py-14 text-center text-sm text-stone-400">No results matching "{search}"</div>
-          ) : (
-            filtered.map((p, i) => {
+        {/* Category Pills */}
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+          <Filter size={14} className="text-stone-400 shrink-0 mt-1.5" />
+          {ALL_CATEGORIES.map(c => (
+            <button key={c} onClick={() => handleCategoryChange(c)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all ${
+                category === c
+                  ? "bg-stone-900 dark:bg-white text-white dark:text-stone-900"
+                  : "bg-white dark:bg-[#16161a] border border-stone-200 dark:border-stone-800/60 text-stone-500 hover:border-stone-300"
+              }`}>{c}</button>
+          ))}
+        </div>
+
+        {/* Featured Cards */}
+        {featured.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {featured.map((p, i) => {
               const isUp = p.changePercent > 0.5;
               const isStable = Math.abs(p.changePercent) <= 0.5;
-              const isUserCrop = p.crop === userPrefs?.crop;
               const displayPrice = (p.price * mult).toFixed(dec);
+              const isSelected = selectedCrop?.crop === p.crop;
               return (
-                <motion.div key={p.crop} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.005 }}
-                  className="grid grid-cols-12 gap-2 px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800/20 transition-colors cursor-pointer items-center">
-                  <div className="col-span-1">
-                    <span className="text-xs text-stone-300 dark:text-stone-600 font-mono">{i+1}</span>
-                  </div>
-                  <div className="col-span-4 flex items-center gap-2.5">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
-                      isUp ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" : isStable ? "bg-stone-100 dark:bg-stone-800 text-stone-500" : "bg-red-50 dark:bg-red-900/20 text-red-500"
-                    }`}>{p.crop.charAt(0)}</div>
-                    <div className="min-w-0">
-                      <p className={`text-sm font-semibold truncate ${isUserCrop ? "text-sage-600 dark:text-sage-400" : "text-stone-900 dark:text-white"}`}>
+                <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.06 }}
+                  onClick={() => handleCropClick(p)}
+                  className={`bg-white dark:bg-[#16161a] border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all group cursor-pointer ${
+                    isSelected ? "border-sage-500 dark:border-sage-600 ring-2 ring-sage-500/20" : "border-stone-200/80 dark:border-stone-800/50"
+                  }`}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest">Spot Price</p>
+                      <p className="text-sm font-bold text-stone-900 dark:text-white mt-0.5 flex items-center gap-1">
                         {p.crop}
-                        {isUserCrop && <span className="ml-1.5 text-[9px] font-bold bg-sage-100 dark:bg-sage-900/30 text-sage-600 px-1.5 py-0.5 rounded-full">Yours</span>}
+                        <ArrowUpRight size={12} className="text-stone-300 group-hover:text-sage-500 transition-colors" />
                       </p>
-                      <p className="text-[11px] text-stone-400">{p.category}</p>
+                      <p className="text-[10px] text-stone-400">{p.category}</p>
                     </div>
+                    <MiniSparkline up={isUp} stable={isStable} />
                   </div>
-                  <div className="col-span-3 text-right">
-                    <p className="text-sm font-semibold text-stone-900 dark:text-white tabular-nums">{currency} {displayPrice}</p>
-                    <p className="text-[11px] text-stone-400">per {unit}</p>
-                  </div>
-                  <div className="col-span-2 hidden sm:flex justify-end">
+                  <p className="text-xl font-bold text-stone-900 dark:text-white tabular-nums">
+                    {currency} {displayPrice}
+                  </p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[11px] text-stone-400">per {UNIT_LABEL[unit]}</span>
                     <ChangeTag value={p.changePercent} />
                   </div>
-                  <div className="col-span-2 hidden sm:flex justify-end">
-                    <MiniSparkline up={isUp} stable={isStable} />
+                  <div className={`mt-2 pt-2 border-t border-stone-100 dark:border-stone-800/40 text-[10px] font-semibold transition-colors ${
+                    isSelected ? "text-sage-600" : "text-stone-300 dark:text-stone-600 group-hover:text-sage-500"
+                  }`}>
+                    {isSelected ? "▶ Viewing insight below →" : "Tap for market insight →"}
                   </div>
                 </motion.div>
               );
-            })
-          )}
+            })}
+          </div>
+        )}
+
+        {/* Tap hint */}
+        <div className="flex items-center gap-2 text-xs text-stone-400 dark:text-stone-600">
+          <span className="inline-block w-1 h-1 rounded-full bg-sage-500" />
+          Tap any crop row to view AI market insight for {userPrefs?.country || "your region"}
         </div>
 
-        <div className="px-4 py-3 border-t border-stone-100 dark:border-stone-800/50 flex items-center justify-between">
-          <p className="text-xs text-stone-400">
-            {filtered.length} of {prices.length} commodities
-            {rates && ` · Updated ${new Date(rates.timestamp).toLocaleTimeString()}`}
-          </p>
-          <p className="text-xs text-stone-300 dark:text-stone-600 italic">Global market baselines · Live FX rates</p>
+        {/* Main Table */}
+        <div className="bg-white dark:bg-[#16161a] border border-stone-200/80 dark:border-stone-800/50 rounded-2xl overflow-hidden shadow-sm">
+          <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-stone-100 dark:border-stone-800/50">
+            <div className="col-span-1"><p className="text-[11px] font-semibold text-stone-400 uppercase tracking-widest">#</p></div>
+            <div className="col-span-4"><SortBtn col="name" label="Commodity" /></div>
+            <div className="col-span-3 flex justify-end"><SortBtn col="price" label={`Price/${unit}`} /></div>
+            <div className="col-span-2 hidden sm:flex justify-end"><SortBtn col="change" label="24h %" /></div>
+            <div className="col-span-2 hidden sm:block" />
+          </div>
+
+          <div className="divide-y divide-stone-100/80 dark:divide-stone-800/30">
+            {filtered.length === 0 ? (
+              <div className="py-14 text-center text-sm text-stone-400">No results matching "{search}"</div>
+            ) : (
+              filtered.map((p, i) => {
+                const isUp = p.changePercent > 0.5;
+                const isStable = Math.abs(p.changePercent) <= 0.5;
+                const isUserCrop = p.crop === userPrefs?.crop;
+                const isSelected = selectedCrop?.crop === p.crop;
+                const displayPrice = (p.price * mult).toFixed(dec);
+                return (
+                  <motion.div key={p.crop} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.004 }}
+                    onClick={() => handleCropClick(p)}
+                    className={`grid grid-cols-12 gap-2 px-4 py-3.5 hover:bg-stone-50 dark:hover:bg-stone-800/20 transition-colors cursor-pointer items-center ${
+                      isSelected ? "bg-sage-50 dark:bg-sage-900/10 border-l-2 border-sage-500" : ""
+                    }`}>
+                    <div className="col-span-1">
+                      <span className="text-xs text-stone-300 dark:text-stone-600 font-mono">{i+1}</span>
+                    </div>
+                    <div className="col-span-4 flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 ${
+                        isUp ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600" : isStable ? "bg-stone-100 dark:bg-stone-800 text-stone-500" : "bg-red-50 dark:bg-red-900/20 text-red-500"
+                      }`}>{p.crop.charAt(0)}</div>
+                      <div className="min-w-0">
+                        <p className={`text-sm font-semibold truncate ${isUserCrop ? "text-sage-600 dark:text-sage-400" : isSelected ? "text-sage-600 dark:text-sage-400" : "text-stone-900 dark:text-white"}`}>
+                          {p.crop}
+                          {isUserCrop && <span className="ml-1.5 text-[9px] font-bold bg-sage-100 dark:bg-sage-900/30 text-sage-600 px-1.5 py-0.5 rounded-full">Yours</span>}
+                        </p>
+                        <p className="text-[11px] text-stone-400">{p.category}</p>
+                      </div>
+                    </div>
+                    <div className="col-span-3 text-right">
+                      <p className="text-sm font-semibold text-stone-900 dark:text-white tabular-nums">{currency} {displayPrice}</p>
+                      <p className="text-[11px] text-stone-400">per {unit}</p>
+                    </div>
+                    <div className="col-span-2 hidden sm:flex justify-end">
+                      <ChangeTag value={p.changePercent} />
+                    </div>
+                    <div className="col-span-2 hidden sm:flex justify-end items-center gap-1">
+                      <MiniSparkline up={isUp} stable={isStable} />
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="px-4 py-3 border-t border-stone-100 dark:border-stone-800/50 flex items-center justify-between">
+            <p className="text-xs text-stone-400">
+              {filtered.length} of {prices.length} commodities
+              {rates && ` · Updated ${new Date(rates.timestamp).toLocaleTimeString()}`}
+            </p>
+            <p className="text-xs text-stone-300 dark:text-stone-600 italic">Global baselines · Live FX · AI insight on tap</p>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Market Insight Panel */}
+      <MarketInsightPanel
+        crop={selectedCrop}
+        country={userPrefs?.country || "Global"}
+        currency={currency}
+        unit={UNIT_LABEL[unit]}
+        unitMult={mult}
+        unitDec={dec}
+        onClose={() => setSelectedCrop(null)}
+      />
+    </>
   );
 }

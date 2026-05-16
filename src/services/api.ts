@@ -2,11 +2,11 @@ import axios from "axios";
 import {
   WeatherData,
   MarketPrice,
+  MarketInsight,
   CropRecommendation,
   SeasonalCalendar,
   CurrencyRates,
   Crop,
-  ChatMessage,
 } from "../types";
 
 const api = axios.create({ baseURL: "/api" });
@@ -21,7 +21,20 @@ export const weatherService = {
 export const marketService = {
   getPrices: async (currency?: string, country?: string, category?: string): Promise<MarketPrice[]> => {
     const res = await api.get<MarketPrice[]>("/market", {
-      params: { currency, country, category },
+      params: { currency, category },
+    });
+    return res.data;
+  },
+  getInsight: async (
+    crop: string,
+    category: string,
+    country: string,
+    currency: string,
+    price: number,
+    changePercent: number
+  ): Promise<MarketInsight> => {
+    const res = await api.post<MarketInsight>("/market/insight", {
+      crop, category, country, currency, price, changePercent,
     });
     return res.data;
   },
@@ -56,7 +69,7 @@ export const currencyService = {
 export const aiService = {
   chat: async (
     message: string,
-    history: ChatMessage[],
+    history: { role: string; content: string }[],
     userPrefs: any
   ): Promise<{ content: string; model: string }> => {
     const res = await api.post("/ai/chat", { message, history, userPrefs });

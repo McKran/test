@@ -47,6 +47,25 @@ export interface MarketPrice {
   growthCycle: string;
 }
 
+export interface MarketInsightDriver {
+  factor: string;
+  impact: "positive" | "negative" | "neutral";
+  description: string;
+}
+
+export interface MarketInsight {
+  crop: string;
+  country: string;
+  summary: string;
+  priceDirection: "rising" | "falling" | "stable";
+  localFactors: string[];
+  globalFactors: string[];
+  prediction: string;
+  confidence: "high" | "medium" | "low";
+  keyDrivers: MarketInsightDriver[];
+  generatedAt?: string;
+}
+
 export interface CropRecommendation {
   name: string;
   suitability: number;

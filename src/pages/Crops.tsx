@@ -121,7 +121,7 @@ export default function Crops() {
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
         <input
           type="text"
-          placeholder="Search 65+ crops by name or category..."
+          placeholder="Search 200+ crops by name or category..."
           value={searchQuery}
           onChange={e => handleSearch(e.target.value)}
           onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}

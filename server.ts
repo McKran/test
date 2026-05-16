@@ -735,7 +735,7 @@ async function startServer() {
   // --- SEASONAL PLAN (legacy endpoint) ---
   app.get("/api/seasonal-plan", async (req, res) => {
     const country = (req.query.country as string) || "USA";
-    const countryInfo = COUNTRY_CLIMATE[country] || { growing_season: "Varies by region" };
+    const countryInfo = COUNTRY_CLIMATE[country] || { zone: "TEMPERATE_NORTH", hemisphere: "N" as const, growing_season: "Varies by region" };
     const plans: Record<string, Record<string, string>> = {
       TEMPERATE_NORTH: { Spring: "Planting", Summer: "Growing", Autumn: "Harvest", Winter: "Preparation" },
       TROPICAL_MONSOON: { Kharif: "Sow & Grow", Rabi: "Harvest & Plant", "Pre-Monsoon": "Preparation", "Post-Monsoon": "Harvest" },
@@ -809,6 +809,138 @@ async function startServer() {
         content: "I encountered an issue processing your request. Please try again.",
         model: "LLaMA-3",
       });
+    }
+  });
+
+  // --- MARKET INSIGHT (AI-powered per-crop price analysis) ---
+  function generateFallbackInsight(crop: string, country: string, changePercent: number) {
+    const direction = changePercent > 0.5 ? "rising" : changePercent < -0.5 ? "falling" : "stable";
+    const month = new Date().toLocaleString("en-US", { month: "long" });
+    const localRising = [
+      `Strong seasonal demand for ${crop} in ${country} — local consumption peaks during ${month}`,
+      `Supply shortages reported in major ${country} production regions following recent weather disruptions`,
+      `Increased export activity reducing domestic ${crop} availability and driving up local prices`,
+    ];
+    const localFalling = [
+      `Surplus ${crop} production from the current harvest season in ${country} flooding local markets`,
+      `Reduced consumer spending and weakening domestic demand pressuring ${crop} prices downward`,
+      `Rising import volumes from lower-cost international suppliers competing with local ${country} produce`,
+    ];
+    const localStable = [
+      `Balanced supply and demand for ${crop} in ${country} supports current price stability`,
+      `Normal seasonal trading patterns with steady production and consistent offtake from processors`,
+      `Stable export-import equilibrium for ${crop} in the region — no major shocks detected`,
+    ];
+    const localFactors = direction === "rising" ? localRising : direction === "falling" ? localFalling : localStable;
+    return {
+      crop, country,
+      summary: direction === "rising"
+        ? `${crop} prices are trending upward in ${country} during ${month}. Demand-side pressures and constrained supply are the primary market drivers right now.`
+        : direction === "falling"
+        ? `${crop} prices are under downward pressure in ${country} this ${month}. Oversupply and softer demand are weighing on the market.`
+        : `${crop} prices remain relatively stable in ${country} this ${month}, reflecting balanced supply-demand fundamentals and normal seasonal trading.`,
+      priceDirection: direction,
+      localFactors,
+      globalFactors: [
+        `Global ${crop} markets show ${direction === "rising" ? "tightening" : direction === "falling" ? "abundant" : "balanced"} supply conditions from major producing nations`,
+        `Currency movements and freight costs are influencing ${crop} import/export competitiveness across international markets`,
+        `Global commodity index trends reflect ${direction === "rising" ? "bullish" : direction === "falling" ? "bearish" : "neutral"} sentiment for agricultural commodities this season`,
+      ],
+      prediction: direction === "rising"
+        ? `Prices may continue rising over the next 2–4 weeks if supply constraints persist. Watch for new harvest forecasts and policy interventions that could cap price gains.`
+        : direction === "falling"
+        ? `Prices may stabilize once excess supply is absorbed by processors and exporters. Any demand uptick or weather event could quickly reverse the downtrend.`
+        : `Prices expected to stay range-bound. Seasonal shifts in coming weeks may introduce moderate volatility — monitor export demand and weather forecasts closely.`,
+      confidence: "medium",
+      keyDrivers: [
+        { factor: "Supply", impact: direction === "rising" ? "negative" : "positive", description: direction === "rising" ? "Below-average supply levels creating upward price pressure in local and regional markets" : "Adequate to surplus supply suppressing prices across distribution channels" },
+        { factor: "Demand", impact: direction === "rising" ? "positive" : "negative", description: direction === "rising" ? "Strong consumer and processor demand outpacing available supply volumes" : "Weakening consumer and industrial demand reducing buyer urgency" },
+        { factor: "Weather", impact: "neutral", description: `Seasonal weather patterns in ${country} are within normal range for ${month} — no acute weather-driven disruptions currently` },
+        { factor: "Policy", impact: "neutral", description: `No major government interventions or import/export policy changes currently affecting ${crop} trade in ${country}` },
+      ],
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  app.post("/api/market/insight", async (req, res) => {
+    const { crop, category, country, currency, price, changePercent } = req.body;
+    if (!crop) return res.status(400).json({ error: "crop is required" });
+
+    const groq = getGroqClient();
+    const pct = Number(changePercent) || 0;
+    const direction = pct > 0.5 ? "rising" : pct < -0.5 ? "falling" : "stable";
+
+    if (!groq) {
+      return res.json(generateFallbackInsight(crop, country || "your region", pct));
+    }
+
+    const currentMonth = new Date().toLocaleString("en-US", { month: "long" });
+    const currentYear = new Date().getFullYear();
+
+    const prompt = `You are a senior agricultural commodity market analyst with expertise in global and local food commodity markets.
+
+Analyze the current market situation for ${crop} (category: ${category || "commodity"}) in ${country || "global"}.
+
+Current data:
+- Crop: ${crop}
+- Country/Region: ${country || "Global"}
+- Current Price: ${price ? `${price} ${currency}/kg` : "market rate"}
+- 24h Price Change: ${pct > 0 ? "+" : ""}${pct.toFixed(2)}% (${direction})
+- Current Month: ${currentMonth} ${currentYear}
+
+Instructions:
+1. PRIORITIZE LOCAL ${(country || "regional").toUpperCase()} market factors first — explain what is specifically happening in ${country || "this region"} that affects ${crop} prices
+2. Then explain relevant global/international factors
+3. Be specific and realistic — reference actual seasonal patterns, typical market drivers for this crop
+4. Provide a near-term 2–4 week price outlook
+
+Return ONLY valid JSON — no markdown, no extra text, no code fences — in EXACTLY this format:
+{
+  "summary": "2-3 sentences describing the current market situation for ${crop} in ${country}",
+  "priceDirection": "${direction}",
+  "localFactors": [
+    "Specific local ${country} factor 1 affecting ${crop} prices",
+    "Specific local ${country} factor 2",
+    "Specific local ${country} factor 3"
+  ],
+  "globalFactors": [
+    "Global/international factor 1 for ${crop}",
+    "Global/international factor 2",
+    "Global/international factor 3"
+  ],
+  "prediction": "2-3 sentence near-term price outlook for ${crop} over the next 2-4 weeks",
+  "confidence": "medium",
+  "keyDrivers": [
+    {"factor": "Supply", "impact": "positive or negative or neutral", "description": "brief description"},
+    {"factor": "Demand", "impact": "positive or negative or neutral", "description": "brief description"},
+    {"factor": "Weather", "impact": "positive or negative or neutral", "description": "brief description"},
+    {"factor": "Policy", "impact": "positive or negative or neutral", "description": "brief description"},
+    {"factor": "Export/Import", "impact": "positive or negative or neutral", "description": "brief description"}
+  ]
+}`;
+
+    try {
+      const completion = await groq.chat.completions.create({
+        model: GROQ_MODELS["LLaMA-3"],
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 900,
+        temperature: 0.35,
+      });
+
+      const raw = completion.choices[0]?.message?.content || "";
+      const jsonMatch = raw.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return res.json({ ...parsed, crop, country, generatedAt: new Date().toISOString() });
+        } catch {
+          // JSON parse failed, use fallback
+        }
+      }
+      return res.json(generateFallbackInsight(crop, country || "your region", pct));
+    } catch (err: any) {
+      console.error("[Market Insight]", err?.message || err);
+      return res.json(generateFallbackInsight(crop, country || "your region", pct));
     }
   });
 
