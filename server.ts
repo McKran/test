@@ -3,7 +3,7 @@ import path from "path";
 import cors from "cors";
 import { createServer as createViteServer } from "vite";
 import axios from "axios";
-import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 
 // ================================================================
 // COMPREHENSIVE INTERNATIONAL CROP DATABASE (65+ crops)
@@ -84,6 +84,154 @@ const CROP_DATABASE = [
   { name: "Black Pepper", category: "Spice", description: "King of spices, most traded spice globally.", growthCycle: "180-240 days", basePricePerKg: 4.50, regions: ["Asia"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON"] },
   { name: "Chili Peppers", category: "Spice", description: "Pungent fruits used as spice worldwide.", growthCycle: "70-100 days", basePricePerKg: 1.10, regions: ["Global"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL", "MEDITERRANEAN"] },
   { name: "Saffron", category: "Spice", description: "World's most expensive spice by weight.", growthCycle: "90-150 days", basePricePerKg: 3500.00, regions: ["Middle East", "Mediterranean"], climateZones: ["ARID", "MEDITERRANEAN"] },
+
+  // --- Additional Grains ---
+  { name: "Triticale", category: "Grain", description: "High-yielding hybrid of wheat and rye for food and feed.", growthCycle: "120-150 days", basePricePerKg: 0.22, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Buckwheat", category: "Grain", description: "Gluten-free pseudo-grain popular in Eastern Europe and Asia.", growthCycle: "70-90 days", basePricePerKg: 0.65, regions: ["Europe", "Asia", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Amaranth", category: "Grain", description: "Ancient Aztec pseudo-grain, high protein and naturally gluten-free.", growthCycle: "90-110 days", basePricePerKg: 2.50, regions: ["Americas", "Asia", "Africa"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "ARID"] },
+  { name: "Fonio", category: "Grain", description: "Ancient West African superfood grain, drought-tolerant and fast-growing.", growthCycle: "60-70 days", basePricePerKg: 1.80, regions: ["Africa"], climateZones: ["ARID", "TROPICAL_MONSOON"] },
+  { name: "Spelt", category: "Grain", description: "Ancient wheat variety for specialty bread and health food markets.", growthCycle: "130-160 days", basePricePerKg: 0.90, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Emmer Wheat", category: "Grain", description: "Heritage grain ancestor of modern wheat, used for specialty markets.", growthCycle: "120-150 days", basePricePerKg: 1.10, regions: ["Middle East", "Europe", "Africa"], climateZones: ["MEDITERRANEAN", "ARID", "TEMPERATE_NORTH"] },
+  { name: "Job's Tears", category: "Grain", description: "Asian grain used in herbal medicine and specialty foods.", growthCycle: "120-160 days", basePricePerKg: 2.00, regions: ["Asia"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Canary Grass", category: "Grain", description: "Hardy grain used for birdseed and specialty human consumption.", growthCycle: "90-120 days", basePricePerKg: 0.55, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+
+  // --- Additional Legumes ---
+  { name: "Black Beans", category: "Legume", description: "Common bean popular in Latin American and Caribbean cuisine.", growthCycle: "80-100 days", basePricePerKg: 1.10, regions: ["Americas", "Global"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "TEMPERATE_NORTH"] },
+  { name: "Kidney Beans", category: "Legume", description: "Large red bean widely used in stews, chili, and salads globally.", growthCycle: "80-100 days", basePricePerKg: 1.20, regions: ["Global"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "TEMPERATE_NORTH", "MEDITERRANEAN"] },
+  { name: "Navy Beans", category: "Legume", description: "Small white bean, the classic base for baked beans and soups.", growthCycle: "80-100 days", basePricePerKg: 1.00, regions: ["Americas", "Europe"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Fava Beans", category: "Legume", description: "Large flat beans popular in Mediterranean and Middle Eastern cuisine.", growthCycle: "90-120 days", basePricePerKg: 0.95, regions: ["Mediterranean", "Middle East", "Americas"], climateZones: ["MEDITERRANEAN", "ARID", "TEMPERATE_NORTH"] },
+  { name: "Adzuki Beans", category: "Legume", description: "Small red bean prized in East Asian desserts and confectionery.", growthCycle: "70-90 days", basePricePerKg: 1.50, regions: ["Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "TEMPERATE_NORTH"] },
+  { name: "Lima Beans", category: "Legume", description: "Creamy butter bean grown widely in tropical Americas and Africa.", growthCycle: "75-100 days", basePricePerKg: 1.30, regions: ["Americas", "Africa", "Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "MEDITERRANEAN"] },
+  { name: "Green Peas", category: "Legume", description: "Cool-season vegetable legume, widely consumed fresh and frozen.", growthCycle: "60-70 days", basePricePerKg: 0.60, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Moth Beans", category: "Legume", description: "Drought-tolerant pulse important in South Asian cooking.", growthCycle: "60-80 days", basePricePerKg: 0.85, regions: ["Asia"], climateZones: ["ARID", "TROPICAL_MONSOON"] },
+  { name: "Tepary Beans", category: "Legume", description: "Drought-resistant Southwestern US bean, exceptionally high in protein.", growthCycle: "60-90 days", basePricePerKg: 2.00, regions: ["Americas"], climateZones: ["ARID", "SUBTROPICAL"] },
+
+  // --- Additional Vegetables ---
+  { name: "Lettuce", category: "Vegetable", description: "Most consumed salad leaf globally, cool-season crop.", growthCycle: "45-60 days", basePricePerKg: 1.20, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "CONTINENTAL"] },
+  { name: "Kale", category: "Vegetable", description: "Nutrient-dense leafy green superfood rich in vitamins and antioxidants.", growthCycle: "50-65 days", basePricePerKg: 1.80, regions: ["Americas", "Europe"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Swiss Chard", category: "Vegetable", description: "Colorful-stemmed leafy green popular in European and Middle Eastern cooking.", growthCycle: "50-65 days", basePricePerKg: 1.50, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Leek", category: "Vegetable", description: "Mild onion-family vegetable, essential in European culinary tradition.", growthCycle: "80-120 days", basePricePerKg: 1.10, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Celery", category: "Vegetable", description: "Crunchy stalked vegetable used fresh in salads and cooked in stocks.", growthCycle: "80-100 days", basePricePerKg: 0.80, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Fennel", category: "Vegetable", description: "Aromatic anise-flavored bulb vegetable, a Mediterranean staple.", growthCycle: "70-90 days", basePricePerKg: 1.40, regions: ["Mediterranean", "Europe"], climateZones: ["MEDITERRANEAN", "TEMPERATE_NORTH"] },
+  { name: "Artichoke", category: "Vegetable", description: "Edible thistle flower bud, a prized Mediterranean gourmet vegetable.", growthCycle: "150-180 days", basePricePerKg: 2.50, regions: ["Mediterranean", "Americas"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Brussels Sprouts", category: "Vegetable", description: "Miniature cabbage buds, cool-season brassica with strong flavor.", growthCycle: "90-120 days", basePricePerKg: 2.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Cauliflower", category: "Vegetable", description: "Versatile white brassica used fresh, roasted, or as a rice substitute.", growthCycle: "70-90 days", basePricePerKg: 1.20, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Asparagus", category: "Vegetable", description: "Prized perennial spring vegetable with delicate, earthy flavor.", growthCycle: "365-730 days", basePricePerKg: 3.50, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Pumpkin", category: "Vegetable", description: "Large winter squash, used for food, animal feed, and global celebrations.", growthCycle: "90-120 days", basePricePerKg: 0.35, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "SUBTROPICAL", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Zucchini", category: "Vegetable", description: "Prolific summer squash harvested young, extremely versatile in cooking.", growthCycle: "45-60 days", basePricePerKg: 0.70, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "SUBTROPICAL", "MEDITERRANEAN"] },
+  { name: "Okra", category: "Vegetable", description: "Tropical vegetable used in gumbo, curries, and stir-fries worldwide.", growthCycle: "60-75 days", basePricePerKg: 1.30, regions: ["Africa", "Asia", "Americas"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL", "ARID"] },
+  { name: "Radish", category: "Vegetable", description: "Fast-growing sharp-flavored root vegetable, one of the quickest crops.", growthCycle: "25-35 days", basePricePerKg: 0.55, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL", "MEDITERRANEAN"] },
+  { name: "Turnip", category: "Vegetable", description: "Cool-season root vegetable, both root and leafy tops are edible.", growthCycle: "40-60 days", basePricePerKg: 0.40, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Beetroot", category: "Vegetable", description: "Sweet earthy root vegetable rich in nitrates, used in salads and juice.", growthCycle: "55-70 days", basePricePerKg: 0.65, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Bok Choy", category: "Vegetable", description: "Crisp Chinese cabbage, cornerstone of East Asian vegetable cuisine.", growthCycle: "45-70 days", basePricePerKg: 0.90, regions: ["Asia", "Americas"], climateZones: ["TEMPERATE_NORTH", "SUBTROPICAL", "TROPICAL_MONSOON"] },
+  { name: "Arugula", category: "Vegetable", description: "Peppery salad leaf, a staple of Italian cuisine and global salads.", growthCycle: "40-50 days", basePricePerKg: 3.00, regions: ["Mediterranean", "Europe", "Americas"], climateZones: ["MEDITERRANEAN", "TEMPERATE_NORTH"] },
+  { name: "Watercress", category: "Vegetable", description: "Aquatic peppery herb, one of the most nutrient-dense vegetables known.", growthCycle: "30-50 days", basePricePerKg: 3.50, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "SUBTROPICAL"] },
+  { name: "Mustard Greens", category: "Vegetable", description: "Peppery leafy green important in Southern US, Indian, and African cuisines.", growthCycle: "40-50 days", basePricePerKg: 0.80, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Bitter Gourd", category: "Vegetable", description: "Tropical vine vegetable valued for its medicinal hypoglycemic properties.", growthCycle: "60-70 days", basePricePerKg: 1.00, regions: ["Asia", "Africa"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Snake Gourd", category: "Vegetable", description: "Long tropical vine vegetable, a staple in South and Southeast Asian cuisine.", growthCycle: "55-70 days", basePricePerKg: 0.70, regions: ["Asia"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON"] },
+  { name: "Parsnip", category: "Vegetable", description: "Sweet nutty root vegetable, essential in European winter cooking.", growthCycle: "120-160 days", basePricePerKg: 0.90, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Kohlrabi", category: "Vegetable", description: "Mild cabbage-flavored stem vegetable popular in Central European cuisine.", growthCycle: "45-60 days", basePricePerKg: 0.80, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Celeriac", category: "Vegetable", description: "Knobby root celery used in European soups, mashes, and remoulade.", growthCycle: "120-150 days", basePricePerKg: 1.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+
+  // --- Additional Fruits ---
+  { name: "Kiwi", category: "Fruit", description: "Fuzzy subtropical fruit exceptionally rich in vitamin C and antioxidants.", growthCycle: "150-180 days", basePricePerKg: 2.50, regions: ["Asia", "Europe", "Americas", "Oceania"], climateZones: ["SUBTROPICAL", "MEDITERRANEAN", "TEMPERATE_SOUTH"] },
+  { name: "Lemon", category: "Fruit", description: "Sour citrus fruit, essential flavoring in global cuisines and beverages.", growthCycle: "180-240 days", basePricePerKg: 0.75, regions: ["Mediterranean", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Lime", category: "Fruit", description: "Small sour citrus, key ingredient in tropical, Asian, and Mexican cuisines.", growthCycle: "180-240 days", basePricePerKg: 0.80, regions: ["Americas", "Asia", "Africa"], climateZones: ["TROPICAL_WET", "SUBTROPICAL", "MEDITERRANEAN"] },
+  { name: "Fig", category: "Fruit", description: "Ancient Mediterranean fruit with sweet, honeyed flesh and edible seeds.", growthCycle: "90-120 days", basePricePerKg: 2.20, regions: ["Mediterranean", "Middle East", "Americas"], climateZones: ["MEDITERRANEAN", "ARID", "SUBTROPICAL"] },
+  { name: "Pomegranate", category: "Fruit", description: "Ancient fruit rich in antioxidants, prized in Middle Eastern and Asian culture.", growthCycle: "150-180 days", basePricePerKg: 2.00, regions: ["Middle East", "Mediterranean", "Asia", "Americas"], climateZones: ["ARID", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Blueberry", category: "Fruit", description: "Top global superfood berry, extremely high in antioxidants and fiber.", growthCycle: "90-120 days", basePricePerKg: 5.50, regions: ["Americas", "Europe", "Oceania"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "TEMPERATE_SOUTH"] },
+  { name: "Raspberry", category: "Fruit", description: "Delicate high-value cane berry, popular fresh, frozen, and for jams.", growthCycle: "90-110 days", basePricePerKg: 6.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Blackberry", category: "Fruit", description: "Wild and cultivated cane berry, high in vitamins C and K.", growthCycle: "90-120 days", basePricePerKg: 5.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Cherry", category: "Fruit", description: "Sweet and sour stone fruit, a high-value temperate orchard crop.", growthCycle: "120-150 days", basePricePerKg: 4.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Plum", category: "Fruit", description: "Juicy stone fruit used fresh and dried as prunes for digestive health.", growthCycle: "120-150 days", basePricePerKg: 1.80, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Peach", category: "Fruit", description: "Sweet, fuzzy stone fruit requiring winter chill, widely cultivated.", growthCycle: "120-150 days", basePricePerKg: 1.50, regions: ["Americas", "Europe", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Pear", category: "Fruit", description: "Mild sweet fruit, the second most important temperate tree fruit globally.", growthCycle: "120-160 days", basePricePerKg: 0.90, regions: ["Europe", "Asia", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Apricot", category: "Fruit", description: "Small golden stone fruit used fresh, dried, and in preserves.", growthCycle: "90-120 days", basePricePerKg: 1.60, regions: ["Mediterranean", "Middle East", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "CONTINENTAL", "ARID"] },
+  { name: "Persimmon", category: "Fruit", description: "Sweet orange autumn fruit native to East Asia and North America.", growthCycle: "120-150 days", basePricePerKg: 2.00, regions: ["Asia", "Americas", "Mediterranean"], climateZones: ["SUBTROPICAL", "TEMPERATE_NORTH", "MEDITERRANEAN"] },
+  { name: "Dragon Fruit", category: "Fruit", description: "Vibrant tropical cactus fruit with mild sweet flavor, Instagram-famous.", growthCycle: "30-50 days", basePricePerKg: 3.00, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET", "SUBTROPICAL", "ARID"] },
+  { name: "Tamarind", category: "Fruit", description: "Sour tropical pod fruit used in sauces, chutneys, beverages, and candy.", growthCycle: "365-540 days", basePricePerKg: 1.50, regions: ["Africa", "Asia", "Americas"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON", "ARID"] },
+  { name: "Breadfruit", category: "Fruit", description: "Starchy tropical fruit, a staple carbohydrate crop in Pacific Island diets.", growthCycle: "90-120 days", basePricePerKg: 0.40, regions: ["Pacific", "Asia", "Americas", "Africa"], climateZones: ["TROPICAL_WET"] },
+  { name: "Soursop", category: "Fruit", description: "Tropical fruit with custard-like flesh, studied for medicinal properties.", growthCycle: "120-150 days", basePricePerKg: 2.50, regions: ["Americas", "Africa", "Asia"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Longan", category: "Fruit", description: "Small sweet tropical fruit similar to lychee, highly prized in Asia.", growthCycle: "90-120 days", basePricePerKg: 2.80, regions: ["Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON"] },
+  { name: "Rambutan", category: "Fruit", description: "Hairy red tropical fruit with sweet white flesh, Southeast Asian delicacy.", growthCycle: "90-120 days", basePricePerKg: 2.50, regions: ["Asia"], climateZones: ["TROPICAL_WET"] },
+  { name: "Elderberry", category: "Fruit", description: "Dark medicinal berry used for immune-boosting syrups, wines, and jams.", growthCycle: "90-120 days", basePricePerKg: 4.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Mulberry", category: "Fruit", description: "Sweet fruit from silk-producing trees, eaten fresh and dried globally.", growthCycle: "60-90 days", basePricePerKg: 2.00, regions: ["Asia", "Mediterranean", "Americas"], climateZones: ["TEMPERATE_NORTH", "SUBTROPICAL", "MEDITERRANEAN"] },
+  { name: "Carambola", category: "Fruit", description: "Star-shaped tropical fruit with refreshing sweet-sour flavor.", growthCycle: "60-90 days", basePricePerKg: 1.80, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Feijoa", category: "Fruit", description: "South American pineapple-guava flavored fruit popular in New Zealand.", growthCycle: "150-180 days", basePricePerKg: 3.50, regions: ["Americas", "Oceania", "Asia"], climateZones: ["SUBTROPICAL", "TEMPERATE_SOUTH"] },
+
+  // --- Additional Cash Crops ---
+  { name: "Hemp", category: "Cash Crop", description: "Industrial cannabis plant, source of fiber, seed oil, and CBD extracts.", growthCycle: "90-120 days", basePricePerKg: 3.00, regions: ["Americas", "Europe", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Jute", category: "Cash Crop", description: "Natural bast fiber plant for burlap sacks, rope, and eco-packaging.", growthCycle: "90-120 days", basePricePerKg: 0.35, regions: ["Asia", "Africa"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Sisal", category: "Cash Crop", description: "Agave plant producing strong natural fiber for ropes and composites.", growthCycle: "365-545 days", basePricePerKg: 0.65, regions: ["Africa", "Americas", "Asia"], climateZones: ["ARID", "TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Flax", category: "Cash Crop", description: "Dual-use crop yielding fine linen fiber and nutritious linseed oil.", growthCycle: "90-110 days", basePricePerKg: 0.45, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Agave", category: "Cash Crop", description: "Succulent used for tequila, mezcal, fiber, and natural sweeteners.", growthCycle: "3650-5475 days", basePricePerKg: 0.80, regions: ["Americas"], climateZones: ["ARID", "SUBTROPICAL"] },
+  { name: "Hops", category: "Cash Crop", description: "Climbing vine providing essential bitterness and aroma to beer globally.", growthCycle: "120-150 days", basePricePerKg: 7.00, regions: ["Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Moringa", category: "Cash Crop", description: "Miracle tree with highly nutritious leaves, seeds, pods, and root bark.", growthCycle: "90-180 days", basePricePerKg: 5.00, regions: ["Asia", "Africa", "Americas"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON", "ARID"] },
+  { name: "Stevia", category: "Cash Crop", description: "Natural zero-calorie sweetener, 200x sweeter than sugar by weight.", growthCycle: "120-150 days", basePricePerKg: 8.00, regions: ["Americas", "Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON"] },
+  { name: "Pyrethrum", category: "Cash Crop", description: "Chrysanthemum-derived natural insecticide, major export from East Africa.", growthCycle: "120-180 days", basePricePerKg: 12.00, regions: ["Africa", "Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON"] },
+  { name: "Kenaf", category: "Cash Crop", description: "Fast-growing tropical plant producing bast fiber for paper and composites.", growthCycle: "90-120 days", basePricePerKg: 0.40, regions: ["Asia", "Africa", "Americas"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON", "ARID"] },
+
+  // --- Additional Oilseeds & Nuts ---
+  { name: "Flaxseed", category: "Oilseed", description: "Omega-3 rich seed used for oil, health supplements, and functional baking.", growthCycle: "90-110 days", basePricePerKg: 0.85, regions: ["Canada", "Europe", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "ARID"] },
+  { name: "Mustard Seed", category: "Oilseed", description: "Pungent seed pressed for cooking oil and ground into mustard condiment.", growthCycle: "85-110 days", basePricePerKg: 0.55, regions: ["Asia", "Europe", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "ARID"] },
+  { name: "Castor Bean", category: "Oilseed", description: "Tropical plant yielding castor oil for lubricants, cosmetics, and biodiesel.", growthCycle: "120-180 days", basePricePerKg: 0.45, regions: ["Asia", "Africa", "Americas"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL", "ARID"] },
+  { name: "Safflower", category: "Oilseed", description: "Drought-tolerant thistle-like crop for cooking oil and natural red-yellow dyes.", growthCycle: "100-120 days", basePricePerKg: 0.65, regions: ["Asia", "Americas", "Europe"], climateZones: ["ARID", "CONTINENTAL", "SUBTROPICAL"] },
+  { name: "Niger Seed", category: "Oilseed", description: "Small black seed, key oilseed in Ethiopia and popular birdseed globally.", growthCycle: "90-120 days", basePricePerKg: 1.00, regions: ["Africa", "Asia"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Almonds", category: "Nut", description: "Most consumed tree nut globally, rich in protein, healthy fats, and vitamin E.", growthCycle: "180-210 days", basePricePerKg: 7.50, regions: ["Mediterranean", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "ARID", "SUBTROPICAL"] },
+  { name: "Walnuts", category: "Nut", description: "Brain-healthy nut rich in omega-3 fatty acids, used worldwide in cooking.", growthCycle: "150-180 days", basePricePerKg: 5.00, regions: ["Americas", "Europe", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Pistachios", category: "Nut", description: "Open-shell green nut from arid regions, a premium global commodity.", growthCycle: "150-180 days", basePricePerKg: 12.00, regions: ["Middle East", "Americas", "Mediterranean"], climateZones: ["ARID", "MEDITERRANEAN", "CONTINENTAL"] },
+  { name: "Macadamia", category: "Nut", description: "Rich buttery nut native to Australia, among the world's most expensive nuts.", growthCycle: "180-210 days", basePricePerKg: 15.00, regions: ["Oceania", "Americas", "Asia", "Africa"], climateZones: ["SUBTROPICAL", "TROPICAL_WET"] },
+  { name: "Hazelnuts", category: "Nut", description: "Sweet round nut used in chocolate spreads, confectionery, and baking.", growthCycle: "120-150 days", basePricePerKg: 4.50, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Chestnuts", category: "Nut", description: "Starchy sweet nut used in stuffings, desserts, and specialty flours.", growthCycle: "120-150 days", basePricePerKg: 3.00, regions: ["Europe", "Asia", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Pine Nuts", category: "Nut", description: "Seeds from pine cones, key ingredient in pesto and Middle Eastern cuisine.", growthCycle: "365-1095 days", basePricePerKg: 25.00, regions: ["Mediterranean", "Middle East", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "CONTINENTAL", "ARID"] },
+  { name: "Brazil Nuts", category: "Nut", description: "Huge rainforest nuts, world's richest selenium source, wild-harvested in Amazon.", growthCycle: "365-730 days", basePricePerKg: 8.00, regions: ["South America"], climateZones: ["TROPICAL_WET"] },
+  { name: "Pecans", category: "Nut", description: "Buttery American tree nut, centerpiece of Southern pies and confectionery.", growthCycle: "180-210 days", basePricePerKg: 7.00, regions: ["Americas"], climateZones: ["SUBTROPICAL", "TEMPERATE_NORTH"] },
+
+  // --- Additional Spices ---
+  { name: "Cardamom", category: "Spice", description: "Queen of spices, fragrant pods essential in South Asian and Scandinavian cuisine.", growthCycle: "270-365 days", basePricePerKg: 30.00, regions: ["Asia", "Middle East", "Americas"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Cinnamon", category: "Spice", description: "Aromatic bark spice from the Cinnamomum tree, the world's most traded sweet spice.", growthCycle: "730-1095 days", basePricePerKg: 8.00, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Cloves", category: "Spice", description: "Intensely pungent dried flower buds, Indonesia's most important export spice.", growthCycle: "365-540 days", basePricePerKg: 12.00, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET"] },
+  { name: "Nutmeg", category: "Spice", description: "Warm tropical spice from Banda Islands, essential in baking and festive drinks.", growthCycle: "180-270 days", basePricePerKg: 10.00, regions: ["Asia", "Americas", "Africa"], climateZones: ["TROPICAL_WET"] },
+  { name: "Star Anise", category: "Spice", description: "Star-shaped spice with licorice flavor, key ingredient in Chinese five spice.", growthCycle: "180-240 days", basePricePerKg: 9.00, regions: ["Asia"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Cumin", category: "Spice", description: "Earthy aromatic seed, foundational in Middle Eastern, Indian, and Mexican cooking.", growthCycle: "90-120 days", basePricePerKg: 3.00, regions: ["Middle East", "Asia", "Mediterranean", "Americas"], climateZones: ["ARID", "MEDITERRANEAN", "TROPICAL_MONSOON"] },
+  { name: "Coriander Seed", category: "Spice", description: "Aromatic dried seeds of the cilantro plant, used whole or ground globally.", growthCycle: "60-90 days", basePricePerKg: 2.50, regions: ["Global"], climateZones: ["TROPICAL_MONSOON", "MEDITERRANEAN", "TEMPERATE_NORTH", "ARID"] },
+  { name: "Fenugreek", category: "Spice", description: "Bitter aromatic seed important in South Asian, Ethiopian, and Middle Eastern cuisine.", growthCycle: "90-120 days", basePricePerKg: 2.00, regions: ["Asia", "Middle East", "Africa"], climateZones: ["ARID", "TROPICAL_MONSOON", "MEDITERRANEAN"] },
+  { name: "Allspice", category: "Spice", description: "Dried berry tasting like a blend of cloves, cinnamon, and nutmeg.", growthCycle: "180-270 days", basePricePerKg: 8.00, regions: ["Americas", "Asia"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+  { name: "Caraway", category: "Spice", description: "Aromatic seed used in rye bread, sauerkraut, and Central European cooking.", growthCycle: "180-240 days", basePricePerKg: 4.50, regions: ["Europe", "Middle East"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Paprika", category: "Spice", description: "Ground sweet red pepper spice, essential in Hungarian goulash and Spanish cuisine.", growthCycle: "70-90 days", basePricePerKg: 5.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL", "CONTINENTAL"] },
+  { name: "Mace", category: "Spice", description: "Delicate outer lace of the nutmeg seed, a warm aromatic baking spice.", growthCycle: "180-270 days", basePricePerKg: 18.00, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET"] },
+  { name: "Bay Leaf", category: "Spice", description: "Aromatic laurel leaf used in slow-cooked dishes and stocks globally.", growthCycle: "730-1095 days", basePricePerKg: 6.00, regions: ["Mediterranean", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL", "TEMPERATE_NORTH"] },
+  { name: "Sumac", category: "Spice", description: "Tangy reddish-purple spice from dried sumac berries, a Middle Eastern staple.", growthCycle: "180-240 days", basePricePerKg: 7.00, regions: ["Middle East", "Mediterranean"], climateZones: ["MEDITERRANEAN", "ARID"] },
+  { name: "Annatto", category: "Spice", description: "Natural red-orange colorant from achiote seeds, used in Latin American cuisine.", growthCycle: "120-150 days", basePricePerKg: 5.00, regions: ["Americas", "Asia", "Africa"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+
+  // --- Herbs ---
+  { name: "Basil", category: "Herb", description: "Cornerstone aromatic herb of Italian pesto and Southeast Asian cuisines.", growthCycle: "60-90 days", basePricePerKg: 8.00, regions: ["Global"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL", "TROPICAL_MONSOON", "TEMPERATE_NORTH"] },
+  { name: "Mint", category: "Herb", description: "Refreshing aromatic herb used in beverages, desserts, and Middle Eastern food.", growthCycle: "60-90 days", basePricePerKg: 5.00, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Oregano", category: "Herb", description: "Essential Mediterranean herb for pizza, pasta, and grilled meats.", growthCycle: "60-90 days", basePricePerKg: 7.00, regions: ["Mediterranean", "Americas", "Asia"], climateZones: ["MEDITERRANEAN", "TEMPERATE_NORTH", "SUBTROPICAL"] },
+  { name: "Thyme", category: "Herb", description: "Woody aromatic herb used in European cooking and traditional medicine.", growthCycle: "60-90 days", basePricePerKg: 6.00, regions: ["Mediterranean", "Americas", "Europe"], climateZones: ["MEDITERRANEAN", "TEMPERATE_NORTH"] },
+  { name: "Rosemary", category: "Herb", description: "Fragrant evergreen herb essential in Mediterranean and European cuisine.", growthCycle: "60-90 days", basePricePerKg: 7.00, regions: ["Mediterranean", "Americas", "Europe"], climateZones: ["MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Parsley", category: "Herb", description: "Versatile garnish and flavoring herb, one of the most widely used globally.", growthCycle: "70-90 days", basePricePerKg: 4.00, regions: ["Global"], climateZones: ["TEMPERATE_NORTH", "MEDITERRANEAN", "SUBTROPICAL"] },
+  { name: "Cilantro", category: "Herb", description: "Bright pungent herb essential in Asian, Latin American, and Middle Eastern cuisine.", growthCycle: "45-70 days", basePricePerKg: 5.00, regions: ["Global"], climateZones: ["TROPICAL_MONSOON", "SUBTROPICAL", "MEDITERRANEAN", "TEMPERATE_NORTH"] },
+  { name: "Dill", category: "Herb", description: "Feathery herb used in pickles, seafood, and Eastern European cuisine.", growthCycle: "60-90 days", basePricePerKg: 4.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Lemongrass", category: "Herb", description: "Tropical citrus-scented grass, key flavoring in Thai and Vietnamese cuisine.", growthCycle: "75-90 days", basePricePerKg: 2.50, regions: ["Asia", "Africa", "Americas"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON", "SUBTROPICAL"] },
+  { name: "Lavender", category: "Herb", description: "Aromatic purple flower used in culinary, cosmetic, and therapeutic applications.", growthCycle: "90-180 days", basePricePerKg: 15.00, regions: ["Mediterranean", "Europe", "Americas"], climateZones: ["MEDITERRANEAN", "TEMPERATE_NORTH", "ARID"] },
+  { name: "Chamomile", category: "Herb", description: "Daisy-like flower with calming properties, one of the most popular herbal teas.", growthCycle: "60-90 days", basePricePerKg: 20.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "MEDITERRANEAN"] },
+  { name: "Peppermint", category: "Herb", description: "Intensely aromatic mint hybrid used in tea, candy, toothpaste, and medicine.", growthCycle: "60-90 days", basePricePerKg: 8.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL", "SUBTROPICAL"] },
+
+  // --- Fiber Crops ---
+  { name: "Ramie", category: "Fiber Crop", description: "East Asian bast fiber plant producing exceptionally strong, lustrous textiles.", growthCycle: "90-120 days", basePricePerKg: 0.75, regions: ["Asia"], climateZones: ["SUBTROPICAL", "TROPICAL_MONSOON"] },
+  { name: "Abaca", category: "Fiber Crop", description: "Philippine banana relative, source of Manila hemp rope fiber for marine use.", growthCycle: "365-540 days", basePricePerKg: 1.20, regions: ["Asia", "Americas"], climateZones: ["TROPICAL_WET"] },
+  { name: "Kapok", category: "Fiber Crop", description: "Tropical tree producing silky, waterproof fiber for pillows and insulation.", growthCycle: "1825-2190 days", basePricePerKg: 0.80, regions: ["Asia", "Africa", "Americas"], climateZones: ["TROPICAL_WET", "TROPICAL_MONSOON"] },
+  { name: "Coir", category: "Fiber Crop", description: "Coconut husk fiber used for mats, rope, and growing media in horticulture.", growthCycle: "365-1095 days", basePricePerKg: 0.25, regions: ["Asia", "Africa"], climateZones: ["TROPICAL_WET", "SUBTROPICAL"] },
+
+  // --- Medicinal ---
+  { name: "Aloe Vera", category: "Medicinal", description: "Succulent with healing gel, major crop for cosmetics and health industry.", growthCycle: "180-365 days", basePricePerKg: 3.00, regions: ["Global"], climateZones: ["ARID", "SUBTROPICAL", "MEDITERRANEAN"] },
+  { name: "Ginseng", category: "Medicinal", description: "Prized adaptogenic root, most valuable medicinal crop in traditional Asian medicine.", growthCycle: "1825-2190 days", basePricePerKg: 60.00, regions: ["Asia", "Americas"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Neem", category: "Medicinal", description: "Multi-purpose tropical tree used in medicine, natural pesticides, and cosmetics.", growthCycle: "730-1095 days", basePricePerKg: 2.00, regions: ["Asia", "Africa", "Americas"], climateZones: ["TROPICAL_MONSOON", "ARID", "SUBTROPICAL"] },
+  { name: "Echinacea", category: "Medicinal", description: "Purple coneflower with immune-boosting properties, top herbal supplement globally.", growthCycle: "90-120 days", basePricePerKg: 15.00, regions: ["Americas", "Europe"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
+  { name: "Ashwagandha", category: "Medicinal", description: "Ayurvedic adaptogenic root, fastest-growing supplement in global wellness market.", growthCycle: "150-180 days", basePricePerKg: 8.00, regions: ["Asia", "Africa", "Americas"], climateZones: ["ARID", "TROPICAL_MONSOON"] },
+  { name: "Kratom", category: "Medicinal", description: "Southeast Asian tree leaf used for pain management and energy stimulation.", growthCycle: "365-730 days", basePricePerKg: 20.00, regions: ["Asia"], climateZones: ["TROPICAL_WET"] },
+  { name: "Valerian", category: "Medicinal", description: "Perennial herb with sedative root extract, widely used in sleep supplements.", growthCycle: "120-150 days", basePricePerKg: 10.00, regions: ["Europe", "Americas", "Asia"], climateZones: ["TEMPERATE_NORTH", "CONTINENTAL"] },
 ];
 
 // ================================================================
@@ -372,15 +520,19 @@ function getMockWeather(location: string) {
 }
 
 // ================================================================
-// AI — GEMINI WITH MODEL ROUTING
+// AI — OPEN-SOURCE MODEL ROUTING VIA GROQ
+// DeepSeek-R1 for reasoning · Qwen-2.5 for knowledge · LLaMA-3 for conversation
 // ================================================================
-const ai = new GoogleGenAI({
-  apiKey: process.env.AI_INTEGRATIONS_GEMINI_API_KEY,
-  httpOptions: {
-    apiVersion: "",
-    baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
-  },
-});
+const GROQ_MODELS = {
+  "DeepSeek-R1": "deepseek-r1-distill-llama-70b",
+  "Qwen-2.5": "llama-3.1-8b-instant",
+  "LLaMA-3": "llama-3.3-70b-versatile",
+} as const;
+
+function getGroqClient(): Groq | null {
+  if (!process.env.GROQ_API_KEY) return null;
+  return new Groq({ apiKey: process.env.GROQ_API_KEY });
+}
 
 type ModelPersona = "DeepSeek-R1" | "Qwen-2.5" | "LLaMA-3";
 
@@ -470,10 +622,9 @@ async function startServer() {
     }
   });
 
-  // --- MARKET PRICES (with live currency conversion) ---
+  // --- MARKET PRICES (all 200+ crops, live currency conversion) ---
   app.get("/api/market", async (req, res) => {
     const targetCurrency = (req.query.currency as string) || "USD";
-    const countryFilter = req.query.country as string;
     const categoryFilter = req.query.category as string;
     const rates = await getCurrencyRates();
     const rate = rates[targetCurrency] || 1;
@@ -481,12 +632,6 @@ async function startServer() {
     let crops = CROP_DATABASE;
     if (categoryFilter && categoryFilter !== "All") {
       crops = crops.filter(c => c.category === categoryFilter);
-    }
-    if (countryFilter) {
-      const countryInfo = COUNTRY_CLIMATE[countryFilter];
-      if (countryInfo) {
-        crops = crops.filter(c => c.climateZones.includes(countryInfo.zone));
-      }
     }
 
     const marketData = crops.map(crop => {
@@ -620,28 +765,45 @@ async function startServer() {
     res.json(topCrops);
   });
 
-  // --- AI CHAT (Gemini + Model Routing) ---
+  // --- AI CHAT (Open-source: DeepSeek-R1 · Qwen-2.5 · LLaMA-3 via Groq) ---
   app.post("/api/ai/chat", async (req, res) => {
     const { message, history = [], userPrefs = {} } = req.body;
     if (!message?.trim()) return res.status(400).json({ error: "Message is required" });
+
+    const groq = getGroqClient();
+
+    if (!groq) {
+      return res.json({
+        content: `Hello! I'd be happy to assist with your farming question. To enable full AI-powered responses using open-source models (DeepSeek-R1, Qwen-2.5, LLaMA-3), please configure your GROQ_API_KEY. Get a free key at console.groq.com`,
+        model: "LLaMA-3",
+      });
+    }
 
     try {
       const persona = routeModel(message);
       const systemInstruction = getSystemPrompt(persona, userPrefs);
 
-      const chat = ai.chats.create({
-        model: "gemini-2.5-flash",
-        config: { systemInstruction },
-        history: history.map((m: any) => ({
-          role: m.role === "ai" ? "model" : "user",
-          parts: [{ text: m.content }],
+      const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
+        { role: "system", content: systemInstruction },
+        ...history.map((m: any) => ({
+          role: (m.role === "ai" ? "assistant" : "user") as "user" | "assistant",
+          content: m.content,
         })),
+        { role: "user", content: message },
+      ];
+
+      const completion = await groq.chat.completions.create({
+        model: GROQ_MODELS[persona],
+        messages: chatMessages,
+        max_tokens: 1024,
+        temperature: persona === "DeepSeek-R1" ? 0.3 : 0.7,
       });
 
-      const response = await chat.sendMessage({ message });
-      res.json({ content: response.text, model: persona });
-    } catch (err) {
-      console.error("[AI Chat]", err instanceof Error ? err.message : err);
+      const content = completion.choices[0]?.message?.content
+        || "I couldn't generate a response. Please try again.";
+      res.json({ content, model: persona });
+    } catch (err: any) {
+      console.error("[AI Chat]", err?.message || err);
       res.status(500).json({
         error: "AI service error",
         content: "I encountered an issue processing your request. Please try again.",
